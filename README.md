@@ -1,5 +1,8 @@
 # codeowners
 
+![build](https://github.com/hmarr/codeowners/workflows/build/badge.svg)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/hmarr/codeowners)](https://pkg.go.dev/github.com/hmarr/codeowners)
+
 A CLI and Go library for GitHub's [CODEOWNERS file](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners#codeowners-syntax).
 
 ## Command line usage

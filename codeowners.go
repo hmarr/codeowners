@@ -1,9 +1,39 @@
+// Package codeowners is a library for working with CODEOWNERS files.
+//
+// CODEOWNERS files map gitignore-style path patterns to sets of owners, which
+// may be GitHub users, GitHub teams, or email addresses. This library parses
+// the CODEOWNERS file format into rulesets, which may then be used to determine
+// the ownership of files.
+//
+// Usage
+//
+// To find the owner of a given file, parse a CODEOWNERS file and call Match()
+// on the resulting ruleset.
+//  ruleset, err := codeowners.ParseFile(file)
+//  if err != nil {
+//  	log.Fatal(err)
+//  }
+//
+//  rule, err := ruleset.Match("path/to/file")
+//  if err != nil {
+//  	log.Fatal(err)
+//  }
+//
+// Command line interface
+//
+// A command line interface is also available in the cmd/codeowners package.
+// When run, it will walk the directory tree showing the code owners for each
+// file encountered. The help flag lists available options.
+//
+//  $ codeowners --help
 package codeowners
 
-// Ruleset is a slice of Rules
+// Ruleset is a collection of CODEOWNERS rules.
 type Ruleset []Rule
 
-// Match finds the last rule in the set that matches the path
+// Match finds the last rule in the ruleset that matches the path provided. When
+// determining the ownership of a file using CODEOWNERS, order matters, and the
+// last matching rule takes precedence.
 func (r Ruleset) Match(path string) (*Rule, error) {
 	for i := len(r) - 1; i >= 0; i-- {
 		rule := r[i]
@@ -15,42 +45,47 @@ func (r Ruleset) Match(path string) (*Rule, error) {
 	return nil, nil
 }
 
-// Rule is a CODEOWNERS rule
+// Rule is a CODEOWNERS rule that maps a gitignore-style path pattern to a set
+// of owners.
 type Rule struct {
-	LineNumber int
-	Pattern    pattern
 	Owners     []Owner
 	Comment    string
+	LineNumber int
+	pattern    pattern
 }
 
-// Match tests whether path matches the rule's pattern
-func (r Rule) Match(testPath string) (bool, error) {
-	return r.Pattern.match(testPath)
+// RawPattern returns the rule's gitignore-style path pattern.
+func (r Rule) RawPattern() string {
+	return r.pattern.pattern
 }
 
-// OwnerType is the type of file owner - one of 'email', 'team', or 'username
-type OwnerType string
+// Match tests whether the provided matches the rule's pattern.
+func (r Rule) Match(path string) (bool, error) {
+	return r.pattern.match(path)
+}
 
 const (
-	// OwnerTypeEmail is an owner type for email file owners
-	OwnerTypeEmail OwnerType = "email"
-
-	// OwnerTypeTeam is an owner type for GitHub team file owners
-	OwnerTypeTeam OwnerType = "team"
-
-	// OwnerTypeUsername is an owner type for GitHub username file owners
-	OwnerTypeUsername OwnerType = "username"
+	// EmailOwner is the owner type for email addresses.
+	EmailOwner string = "email"
+	// TeamOwner is the owner type for GitHub teams.
+	TeamOwner string = "team"
+	// UsernameOwner is the owner type for GitHub usernames.
+	UsernameOwner string = "username"
 )
 
-// Owner represents a file owner
+// Owner represents an owner found in a rule.
 type Owner struct {
+	// Value is the name of the owner: the email addres, team name, or username.
 	Value string
-	Type  OwnerType
+	// Type will be one of 'email', 'team', or 'username'.
+	Type string
 }
 
-// String returns a string representation of the owner
+// String returns a string representation of the owner. For email owners, it
+// simply returns the email address. For user and team owners it prepends an '@'
+// to the owner.
 func (o Owner) String() string {
-	if o.Type == "email" {
+	if o.Type == EmailOwner {
 		return o.Value
 	}
 	return "@" + o.Value

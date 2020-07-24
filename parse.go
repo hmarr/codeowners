@@ -20,7 +20,7 @@ const (
 	stateOwners
 )
 
-// ParseFile parses a CODEOWNERS file
+// ParseFile parses a CODEOWNERS file, returning a set of rules.
 func ParseFile(f io.Reader) (Ruleset, error) {
 	rules := Ruleset{}
 	scanner := bufio.NewScanner(f)
@@ -74,7 +74,7 @@ func parseRule(ruleStr string) (Rule, error) {
 				if err != nil {
 					return r, err
 				}
-				r.Pattern = pattern
+				r.pattern = pattern
 				buf.Reset()
 				state = stateOwners
 
@@ -144,17 +144,17 @@ func parseRule(ruleStr string) (Rule, error) {
 func newOwner(s string) (Owner, error) {
 	match := emailRegexp.FindStringSubmatch(s)
 	if match != nil {
-		return Owner{Value: match[0], Type: "email"}, nil
+		return Owner{Value: match[0], Type: EmailOwner}, nil
 	}
 
 	match = teamRegexp.FindStringSubmatch(s)
 	if match != nil {
-		return Owner{Value: match[1], Type: "team"}, nil
+		return Owner{Value: match[1], Type: TeamOwner}, nil
 	}
 
 	match = usernameRegexp.FindStringSubmatch(s)
 	if match != nil {
-		return Owner{Value: match[1], Type: "username"}, nil
+		return Owner{Value: match[1], Type: UsernameOwner}, nil
 	}
 
 	return Owner{}, fmt.Errorf("invalid owner format '%s'", s)
@@ -171,7 +171,7 @@ func isAlphanumeric(ch rune) bool {
 // isPatternChar matches characters that are allowed in patterns
 func isPatternChar(ch rune) bool {
 	switch ch {
-	case '*', '?', '.', '/', '@', '_', '+', '-':
+	case '*', '?', '.', '/', '@', '_', '+', '-', '[', ']', '\\':
 		return true
 	}
 	return isAlphanumeric(ch)

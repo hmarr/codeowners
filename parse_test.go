@@ -18,7 +18,7 @@ func TestParseRule(t *testing.T) {
 			name: "username owners",
 			rule: "file.txt @user",
 			expected: Rule{
-				Pattern: mustBuildPattern(t, "file.txt"),
+				pattern: mustBuildPattern(t, "file.txt"),
 				Owners:  []Owner{{Value: "user", Type: "username"}},
 			},
 		},
@@ -26,7 +26,7 @@ func TestParseRule(t *testing.T) {
 			name: "team owners",
 			rule: "file.txt @org/team",
 			expected: Rule{
-				Pattern: mustBuildPattern(t, "file.txt"),
+				pattern: mustBuildPattern(t, "file.txt"),
 				Owners:  []Owner{{Value: "org/team", Type: "team"}},
 			},
 		},
@@ -34,7 +34,7 @@ func TestParseRule(t *testing.T) {
 			name: "email owners",
 			rule: "file.txt foo@example.com",
 			expected: Rule{
-				Pattern: mustBuildPattern(t, "file.txt"),
+				pattern: mustBuildPattern(t, "file.txt"),
 				Owners:  []Owner{{Value: "foo@example.com", Type: "email"}},
 			},
 		},
@@ -42,7 +42,7 @@ func TestParseRule(t *testing.T) {
 			name: "multiple owners",
 			rule: "file.txt @user @org/team foo@example.com",
 			expected: Rule{
-				Pattern: mustBuildPattern(t, "file.txt"),
+				pattern: mustBuildPattern(t, "file.txt"),
 				Owners: []Owner{
 					{Value: "user", Type: "username"},
 					{Value: "org/team", Type: "team"},
@@ -52,9 +52,9 @@ func TestParseRule(t *testing.T) {
 		},
 		{
 			name: "complex patterns",
-			rule: "d?r/* @user",
+			rule: "[d]?r/* @user",
 			expected: Rule{
-				Pattern: mustBuildPattern(t, "d?r/*"),
+				pattern: mustBuildPattern(t, "[d]?r/*"),
 				Owners:  []Owner{{Value: "user", Type: "username"}},
 			},
 		},
@@ -62,7 +62,7 @@ func TestParseRule(t *testing.T) {
 			name: "pattern with space",
 			rule: "foo\\ bar @user",
 			expected: Rule{
-				Pattern: mustBuildPattern(t, "foo\\ bar"),
+				pattern: mustBuildPattern(t, "foo\\ bar"),
 				Owners:  []Owner{{Value: "user", Type: "username"}},
 			},
 		},
@@ -70,7 +70,7 @@ func TestParseRule(t *testing.T) {
 			name: "comments",
 			rule: "file.txt @user # some comment",
 			expected: Rule{
-				Pattern: mustBuildPattern(t, "file.txt"),
+				pattern: mustBuildPattern(t, "file.txt"),
 				Owners:  []Owner{{Value: "user", Type: "username"}},
 				Comment: "some comment",
 			},
@@ -89,13 +89,13 @@ func TestParseRule(t *testing.T) {
 		},
 		{
 			name: "malformed patterns",
-			rule: "file.[txt @user",
-			err:  "unexpected character '[' at position 6",
+			rule: "file.{txt @user",
+			err:  "unexpected character '{' at position 6",
 		},
 		{
 			name: "malformed owners",
 			rule: "file.txt missing-at-sign",
-			err:  "invalid owner at position 10",
+			err:  "invalid owner format 'missing-at-sign' at position 10",
 		},
 	}
 
@@ -105,6 +105,7 @@ func TestParseRule(t *testing.T) {
 			if e.err != "" {
 				assert.EqualError(t, err, e.err)
 			} else {
+				assert.NoError(t, err)
 				assert.Equal(t, e.expected, actual)
 			}
 		})

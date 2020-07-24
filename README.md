@@ -13,7 +13,7 @@ You can pass the `--owner` flag to filter results by a specific owner.
 
 To limit the files the tool looks at, provide one or more paths as arguments.
 
-```shell
+```
 $ codeowners --help
 usage: codeowners <path>...
   -f, --file string    CODEOWNERS file path (default "CODEOWNERS")

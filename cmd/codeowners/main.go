@@ -11,25 +11,28 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var (
-	ownerFilter    *string = flag.StringP("owner", "o", "", "filter results by owner")
-	codeownersPath *string = flag.StringP("file", "f", "", "CODEOWNERS file path")
-	helpFlag       *bool   = flag.BoolP("help", "h", false, "show this help message")
-)
-
 func main() {
+	var (
+		ownerFilters   []string
+		codeownersPath string
+		helpFlag       bool
+	)
+	flag.StringSliceVarP(&ownerFilters, "owner", "o", nil, "filter results by owner")
+	flag.StringVarP(&codeownersPath, "file", "f", "", "CODEOWNERS file path")
+	flag.BoolVarP(&helpFlag, "help", "h", false, "show this help message")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: codeowners <path>...\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 
-	if *helpFlag {
+	if helpFlag {
 		flag.Usage()
 		os.Exit(0)
 	}
 
-	ruleset, err := loadCodeowners(*codeownersPath)
+	ruleset, err := loadCodeowners(codeownersPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -41,12 +44,14 @@ func main() {
 	}
 
 	// Make the @ optional for GitHub teams and usernames
-	*ownerFilter = strings.TrimLeft(*ownerFilter, "@")
+	for i := range ownerFilters {
+		ownerFilters[i] = strings.TrimLeft(ownerFilters[i], "@")
+	}
 
 	for _, startPath := range paths {
 		// godirwalk only accepts directories, so we need to handle files separately
 		if !isDir(startPath) {
-			if err := printFileOwners(ruleset, startPath); err != nil {
+			if err := printFileOwners(ruleset, startPath, ownerFilters); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v", err)
 				os.Exit(1)
 			}
@@ -61,7 +66,7 @@ func main() {
 
 				// Only show code owners for files, not directories
 				if !dirent.IsDir() {
-					return printFileOwners(ruleset, path)
+					return printFileOwners(ruleset, path, ownerFilters)
 				}
 				return nil
 			},
@@ -75,25 +80,36 @@ func main() {
 	}
 }
 
-func printFileOwners(ruleset codeowners.Ruleset, path string) error {
+func printFileOwners(ruleset codeowners.Ruleset, path string, ownerFilters []string) error {
 	rule, err := ruleset.Match(path)
 	if err != nil {
 		return err
 	}
+	// If we didn't get a match, the file is unowned
 	if rule == nil {
-		if *ownerFilter == "" {
+		// Don't show unowned files if we're filtering by owner
+		if len(ownerFilters) == 0 {
 			fmt.Printf("%-70s  (unowned)\n", path)
 		}
 		return nil
 	}
 
+	// Figure out which of the owners we need to show according to the --owner filters
 	owners := []string{}
 	for _, o := range rule.Owners {
-		if *ownerFilter == "" || o.Value == *ownerFilter {
+		// If there are no filters, show all owners
+		filterMatch := len(ownerFilters) == 0
+		for _, filter := range ownerFilters {
+			if filter == o.Value {
+				filterMatch = true
+			}
+		}
+		if filterMatch {
 			owners = append(owners, o.String())
 		}
 	}
 
+	// If the owners slice is empty, no owners matched the filters so don't show anything
 	if len(owners) > 0 {
 		fmt.Printf("%-70s  %s\n", path, strings.Join(owners, " "))
 	}

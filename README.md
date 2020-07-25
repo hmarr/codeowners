@@ -16,9 +16,9 @@ To limit the files the tool looks at, provide one or more paths as arguments.
 ```
 $ codeowners --help
 usage: codeowners <path>...
-  -f, --file string    CODEOWNERS file path (default "CODEOWNERS")
-  -h, --help           show this help message
-  -o, --owner string   filter results by owner
+  -f, --file string     CODEOWNERS file path
+  -h, --help            show this help message
+  -o, --owner strings   filter results by owner
 ```
 
 ## Go library usage

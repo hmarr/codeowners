@@ -28,6 +28,74 @@
 //  $ codeowners --help
 package codeowners
 
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+// LoadFileFromStandardLocation loads and parses a CODEOWNERS file at one of the
+// standard locations for CODEOWNERS files (./, .github/, docs/). If run from a
+// git repository, all paths are relative to the repository root.
+func LoadFileFromStandardLocation() (Ruleset, error) {
+	path := findFileAtStandardLocation()
+	if path == "" {
+		return nil, fmt.Errorf("could not find CODEOWNERS file at any of the standard locations")
+	}
+	return LoadFile(path)
+}
+
+// LoadFile loads and parses a CODEOWNERS file at the path specified.
+func LoadFile(path string) (Ruleset, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return ParseFile(f)
+}
+
+// findFileAtStandardLocation loops through the standard locations for
+// CODEOWNERS files (./, .github/, docs/), and returns the first place a
+// CODEOWNERS file is found. If run from a git repository, all paths are
+// relative to the repository root.
+func findFileAtStandardLocation() string {
+	pathPrefix := ""
+	repoRoot, inRepo := findRepositoryRoot()
+	if inRepo {
+		pathPrefix = repoRoot
+	}
+
+	for _, path := range []string{"CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS"} {
+		fullPath := filepath.Join(pathPrefix, path)
+		if fileExists(fullPath) {
+			return fullPath
+		}
+	}
+	return ""
+}
+
+// fileExist checks if a normal file exists at the path specified.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+// findRepository root returns the path to the root of the git repository, if
+// we're currently in one. If we're not in a git repository, the boolean return
+// value is false.
+func findRepositoryRoot() (string, bool) {
+	output, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return "", false
+	}
+	return strings.TrimSpace(string(output)), true
+}
+
 // Ruleset is a collection of CODEOWNERS rules.
 type Ruleset []Rule
 

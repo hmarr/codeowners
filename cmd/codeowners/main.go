@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hmarr/codeowners"
 	"github.com/karrick/godirwalk"
@@ -77,11 +78,13 @@ func printFileOwners(ruleset codeowners.Ruleset, path string) error {
 		return err
 	}
 
+	owners := []string{}
 	for _, o := range rule.Owners {
 		if *ownerFilter == "" || o.Value == *ownerFilter {
-			fmt.Printf("%s:\t%s\n", path, o.String())
+			owners = append(owners, o.String())
 		}
 	}
+	fmt.Printf("%-70s  %s\n", path, strings.Join(owners, " "))
 	return nil
 }
 

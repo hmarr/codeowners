@@ -7,7 +7,7 @@ A CLI and Go library for GitHub's [CODEOWNERS file](https://docs.github.com/en/g
 
 ## Command line usage
 
-By default, the command line tool will walk the directory tree, printing the code owners of any files that are found, with one owner per line (so files with multiple owners appear multiple times).
+By default, the command line tool will walk the directory tree, printing the code owners of any files that are found.
 
 You can pass the `--owner` flag to filter results by a specific owner.
 

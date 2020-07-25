@@ -18,11 +18,11 @@ var (
 )
 
 func main() {
-	flag.Parse()
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: codeowners <path>...\n")
 		flag.PrintDefaults()
 	}
+	flag.Parse()
 
 	if *helpFlag {
 		flag.Usage()
@@ -39,6 +39,9 @@ func main() {
 	if len(paths) == 0 {
 		paths = append(paths, ".")
 	}
+
+	// Make the @ optional for GitHub teams and usernames
+	*ownerFilter = strings.TrimLeft(*ownerFilter, "@")
 
 	for _, startPath := range paths {
 		// godirwalk only accepts directories, so we need to handle files separately
@@ -74,8 +77,14 @@ func main() {
 
 func printFileOwners(ruleset codeowners.Ruleset, path string) error {
 	rule, err := ruleset.Match(path)
-	if rule == nil || err != nil {
+	if err != nil {
 		return err
+	}
+	if rule == nil {
+		if *ownerFilter == "" {
+			fmt.Printf("%-70s  (unowned)\n", path)
+		}
+		return nil
 	}
 
 	owners := []string{}
@@ -84,7 +93,10 @@ func printFileOwners(ruleset codeowners.Ruleset, path string) error {
 			owners = append(owners, o.String())
 		}
 	}
-	fmt.Printf("%-70s  %s\n", path, strings.Join(owners, " "))
+
+	if len(owners) > 0 {
+		fmt.Printf("%-70s  %s\n", path, strings.Join(owners, " "))
+	}
 	return nil
 }
 

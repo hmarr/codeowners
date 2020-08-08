@@ -5,6 +5,21 @@
 
 A CLI and Go library for GitHub's [CODEOWNERS file](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners#codeowners-syntax).
 
+## Installation
+
+Install the CLI from the [homebrew tap](https://github.com/hmarr/homebrew-tap#codeowners).
+
+```console
+$ brew tap hmarr/tap
+$ brew install codeowners
+```
+
+Install the library with `go get`.
+
+```console
+$ go get github.com/hmarr/codeowners@latest
+```
+
 ## Command line usage
 
 By default, the command line tool will walk the directory tree, printing the code owners of any files that are found.
@@ -49,6 +64,8 @@ example.go                           @example/go-engineers
 ```
 
 ## Go library usage
+
+Documentation is available at [pkg.go.dev](https://pkg.go.dev/github.com/hmarr/codeowners).
 
 ```go
 package main

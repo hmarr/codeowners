@@ -9,16 +9,43 @@ A CLI and Go library for GitHub's [CODEOWNERS file](https://docs.github.com/en/g
 
 By default, the command line tool will walk the directory tree, printing the code owners of any files that are found.
 
-You can pass the `--owner` flag to filter results by a specific owner.
-
-To limit the files the tool looks at, provide one or more paths as arguments.
-
-```
+```console
 $ codeowners --help
 usage: codeowners <path>...
   -f, --file string     CODEOWNERS file path
   -h, --help            show this help message
   -o, --owner strings   filter results by owner
+
+$ ls
+CODEOWNERS       DOCUMENTATION.md README.md        example.go       example_test.go
+
+$ cat CODEOWNERS
+*.go       @example/go-engineers
+*.md       @example/docs-writers
+README.md  product-manager@example.com
+
+$ codeowners
+CODEOWNERS                           (unowned)
+README.md                            product-manager@example.com
+example_test.go                      @example/go-engineers
+example.go                           @example/go-engineers
+DOCUMENTATION.md                     @example/docs-writers
+```
+
+To limit the files the tool looks at, provide one or more paths as arguments.
+
+```console
+$ codeowners *.md
+README.md                            product-manager@example.com
+DOCUMENTATION.md                     @example/docs-writers
+```
+
+Pass the `--owner` flag to filter results by a specific owner.
+
+```console
+$ codeowners -o @example/go-engineers
+example_test.go                      @example/go-engineers
+example.go                           @example/go-engineers
 ```
 
 ## Go library usage

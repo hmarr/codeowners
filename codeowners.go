@@ -85,7 +85,7 @@ func fileExists(path string) bool {
 	return !info.IsDir()
 }
 
-// findRepository root returns the path to the root of the git repository, if
+// findRepositoryRoot returns the path to the root of the git repository, if
 // we're currently in one. If we're not in a git repository, the boolean return
 // value is false.
 func findRepositoryRoot() (string, bool) {

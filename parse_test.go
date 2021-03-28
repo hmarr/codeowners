@@ -52,9 +52,9 @@ func TestParseRule(t *testing.T) {
 		},
 		{
 			name: "complex patterns",
-			rule: "[d]?r/* @user",
+			rule: "d?r/* @user",
 			expected: Rule{
-				pattern: mustBuildPattern(t, "[d]?r/*"),
+				pattern: mustBuildPattern(t, "d?r/*"),
 				Owners:  []Owner{{Value: "user", Type: "username"}},
 			},
 		},
@@ -91,6 +91,11 @@ func TestParseRule(t *testing.T) {
 			name: "malformed patterns",
 			rule: "file.{txt @user",
 			err:  "unexpected character '{' at position 6",
+		},
+		{
+			name: "patterns with brackets",
+			rule: "file.[cC] @user",
+			err:  "unexpected character '[' at position 6",
 		},
 		{
 			name: "malformed owners",

@@ -25,7 +25,7 @@ func Example() {
 }
 
 func ExampleParseFile() {
-	f := bytes.NewBufferString("src/**/*.[hc] @acme/c-developers # C headers and source")
+	f := bytes.NewBufferString("src/**/*.go @acme/go-developers # Go code")
 	ruleset, err := codeowners.ParseFile(f)
 	if err != nil {
 		panic(err)
@@ -36,29 +36,29 @@ func ExampleParseFile() {
 	fmt.Println(ruleset[0].Comment)
 	// Output:
 	// 1
-	// src/**/*.[hc]
-	// @acme/c-developers
-	// C headers and source
+	// src/**/*.go
+	// @acme/go-developers
+	// Go code
 }
 
 func ExampleRuleset_Match() {
-	f := bytes.NewBufferString("src/**/*.[hc] @acme/c-developers # C headers and source")
+	f := bytes.NewBufferString("src/**/*.go @acme/go-developers # Go code")
 	ruleset, _ := codeowners.ParseFile(f)
 
 	match, _ := ruleset.Match("src")
 	fmt.Println("src", match != nil)
 
-	match, _ = ruleset.Match("src/foo.c")
-	fmt.Println("src/foo.c", match != nil)
+	match, _ = ruleset.Match("src/foo.go")
+	fmt.Println("src/foo.go", match != nil)
 
-	match, _ = ruleset.Match("src/foo/bar.h")
-	fmt.Println("src/foo/bar.h", match != nil)
+	match, _ = ruleset.Match("src/foo/bar.go")
+	fmt.Println("src/foo/bar.go", match != nil)
 
 	match, _ = ruleset.Match("src/foo.rs")
 	fmt.Println("src/foo.rs", match != nil)
 	// Output:
 	// src false
-	// src/foo.c true
-	// src/foo/bar.h true
+	// src/foo.go true
+	// src/foo/bar.go true
 	// src/foo.rs false
 }

@@ -2,6 +2,7 @@ package codeowners
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -31,101 +32,111 @@ func (p pattern) match(testPath string) (bool, error) {
 
 // buildPatternRegex compiles a new regexp object from a gitignore-style pattern string
 func buildPatternRegex(pattern string) (*regexp.Regexp, error) {
-	var re strings.Builder
-
-	// The pattern is anchored if it starts with a slash, or has a slash before the
-	// final character
-	slashPos := strings.IndexByte(pattern, '/')
-	anchored := slashPos != -1 && slashPos != len(pattern)-1
-	if anchored {
-		// Patterns with a non-terminal slash can only match from the start of the string
-		re.WriteString(`\A`)
-	} else {
-		// Patterns without a non-terminal slash can match anywhere, but still need to
-		// consider string and path-segment boundaries
-		re.WriteString(`(?:\A|/)`)
+	// Handle specific edge cases first
+	switch {
+	case strings.Contains(pattern, "***"):
+		return nil, fmt.Errorf("pattern cannot contain three consecutive asterisks")
+	case pattern == "":
+		return nil, fmt.Errorf("empty pattern")
+	case pattern == "/":
+		// "/" doesn't match anything
+		return regexp.Compile(`\A\z`)
 	}
 
-	// For consistency, strip leading and trailing slashes from the pattern, but
-	// keep track of whether it's a directory-only pattern (has a trailing slash)
-	matchesDir := pattern[len(pattern)-1] == '/'
-	patternRunes := []rune(strings.Trim(pattern, "/"))
+	segs := strings.Split(pattern, "/")
 
-	inCharClass := false
-	escaped := false
-	for i := 0; i < len(patternRunes); i++ {
-		ch := patternRunes[i]
-
-		// If the previous character was a backslash, treat this as a literal
-		if escaped {
-			re.WriteString(regexp.QuoteMeta(string(ch)))
-			escaped = false
-			continue
+	if segs[0] == "" {
+		// Leading slash: match is relative to root
+		segs = segs[1:]
+	} else {
+		// No leading slash - check for a single segment pattern, which matches
+		// relative to any descendent path (equivalent to a leading **/)
+		if len(segs) == 1 || (len(segs) == 2 && segs[1] == "") {
+			if segs[0] != "**" {
+				segs = append([]string{"**"}, segs...)
+			}
 		}
+	}
 
-		switch ch {
-		case '\\':
-			// Escape the next character
-			escaped = true
+	if len(segs) > 1 && segs[len(segs)-1] == "" {
+		// Trailing slash is equivalent to "/**"
+		segs[len(segs)-1] = "**"
+	}
 
-		case '*':
-			// Check for double-asterisk wildcards (^**/, /**/, /**$)
-			if i+1 < len(patternRunes) && patternRunes[i+1] == '*' {
-				leftAnchored := i == 0
-				leadingSlash := i > 0 && patternRunes[i-1] == '/'
-				rightAnchored := i+2 == len(patternRunes)
-				trailingSlash := i+2 < len(patternRunes) && patternRunes[i+2] == '/'
+	sep := string(os.PathSeparator)
 
-				if (leftAnchored || leadingSlash) && (rightAnchored || trailingSlash) {
-					re.WriteString(`.*`)
+	lastSegIndex := len(segs) - 1
+	needSlash := false
+	var re strings.Builder
+	re.WriteString(`\A`)
+	for i, seg := range segs {
+		switch seg {
+		case "**":
+			switch {
+			case i == 0 && i == lastSegIndex:
+				// If the pattern is just "**" we match everything
+				re.WriteString(`.+`)
+			case i == 0:
+				// If the pattern starts with "**" we match any leading path segment
+				re.WriteString(`(?:.+` + sep + `)?`)
+				needSlash = false
+			case i == lastSegIndex:
+				// If the pattern ends with "**" we match any trailing path segment
+				re.WriteString(sep + `.*`)
+			default:
+				// If the pattern contains "**" we match zero or more path segments
+				re.WriteString(`(?:` + sep + `.+)?`)
+				needSlash = true
+			}
 
-					// Leading (**/) and middle (/**/) wildcards have two extra characters to
-					// skip, and with trailing wildcards (/**) we're at the end anyway
-					i += 2
-					break
+		case "*":
+			if needSlash {
+				re.WriteString(sep)
+			}
+
+			// Regular wildcard - match any characters except the separator
+			re.WriteString(`[^` + sep + `]+`)
+			needSlash = true
+
+		default:
+			if needSlash {
+				re.WriteString(sep)
+			}
+
+			escape := false
+			for _, ch := range seg {
+				if escape {
+					escape = false
+					re.WriteString(regexp.QuoteMeta(string(ch)))
+					continue
+				}
+
+				// Other pathspec implementations handle character classes here (e.g.
+				// [AaBb]), but CODEOWNERS doesn't support that so we don't need to
+				switch ch {
+				case '\\':
+					escape = true
+				case '*':
+					// Multi-character wildcard
+					re.WriteString(`[^` + sep + `]*`)
+				case '?':
+					// Single-character wildcard
+					re.WriteString(`[^` + sep + `]`)
+				default:
+					// Regular character
+					re.WriteString(regexp.QuoteMeta(string(ch)))
 				}
 			}
 
-			// If it's not a double-asterisk, treat it as a regular wildcard
-			re.WriteString(`[^/]*`)
-
-		case '?':
-			// Single-character wildcard
-			re.WriteString(`[^/]`)
-
-		case '[':
-			// Open a character class
-			inCharClass = true
-			re.WriteRune(ch)
-
-		case ']':
-			// Close the character class if we're in one, or treat as a literal
-			if inCharClass {
-				re.WriteRune(ch)
-				inCharClass = false
-			} else {
-				re.WriteString(regexp.QuoteMeta(string(ch)))
+			if i == lastSegIndex {
+				// As there's no trailing slash (that'd hit the '**' case), we
+				// need to match descendent paths
+				re.WriteString(`(?:` + sep + `.*)?`)
 			}
 
-		default:
-			// Escape literal characters so they don't interfere with the regex
-			re.WriteString(regexp.QuoteMeta(string(ch)))
+			needSlash = true
 		}
 	}
-
-	if inCharClass {
-		return nil, fmt.Errorf("unterminated character class in pattern %s", pattern)
-	}
-
-	if matchesDir {
-		// This will match either a directory that's prefix of a path provided, or
-		// a suffix if we assume that tested directories always have a trailing slash
-		re.WriteString(`/`)
-	} else {
-		// End the match either at the end of the string or at a slash (in the case that
-		// we've matched a directory)
-		re.WriteString(`(?:\z|/)`)
-	}
-
+	re.WriteString(`\z`)
 	return regexp.Compile(re.String())
 }

@@ -1,0 +1,309 @@
+[
+   {
+      "name": "single-segment pattern",
+      "pattern": "foo",
+      "paths": {
+         "foo": true,
+         "foo.txt": false,
+         "foo/bar": true,
+         "bar/foo": true,
+         "bar/foo.txt": false,
+         "bar/baz": false,
+         "bar/foo/baz": true
+      }
+   },
+   {
+      "name": "single-segment pattern with leading slash",
+      "pattern": "/foo",
+      "paths": {
+         "foo": true,
+         "fool.txt": false,
+         "foo/bar": true,
+         "bar/foo": false,
+         "bar/baz": false,
+         "foo/bar/baz": true,
+         "bar/foo/baz": false
+      }
+   },
+   {
+      "name": "single-segment pattern with trailing slash",
+      "pattern": "foo/",
+      "paths": {
+         "foo": false,
+         "foo/bar": true,
+         "foo/bar/baz": true,
+         "bar/foo": false,
+         "bar/baz": false,
+         "bar/foo/baz": true,
+         "bar/foo/baz/qux": true
+      }
+   },
+   {
+      "name": "single-segment pattern with leading and trailing slash",
+      "pattern": "/foo/",
+      "paths": {
+         "foo": false,
+         "foo/bar": true,
+         "foo/bar/baz": true,
+         "bar/foo": false,
+         "bar/baz": false,
+         "bar/foo/baz": false,
+         "bar/foo/baz/qux": false
+      }
+   },
+   {
+      "name": "multi-segment (implicitly left-anchored) pattern",
+      "pattern": "foo/bar",
+      "paths": {
+         "foo/bar": true,
+         "foo/bart": false,
+         "foo/bar/baz": true,
+         "baz/foo/bar": false,
+         "baz/foo/bar/qux": false
+      }
+   },
+   {
+      "name": "multi-segment pattern with leading slash",
+      "pattern": "/foo/bar",
+      "paths": {
+         "foo/bar": true,
+         "foo/bart": false,
+         "foo/bar/baz": true,
+         "baz/foo/bar": false,
+         "baz/foo/bar/qux": false
+      }
+   },
+   {
+      "name": "multi-segment pattern with trailing slash",
+      "pattern": "foo/bar/",
+      "paths": {
+         "foo/bar": false,
+         "foo/bart": false,
+         "foo/bar/baz": true,
+         "baz/foo/bar": false,
+         "baz/foo/bar/qux": false
+      }
+   },
+   {
+      "name": "multi-segment pattern with leading and trailing slash",
+      "pattern": "/foo/bar/",
+      "paths": {
+         "foo/bar": false,
+         "foo/bart": false,
+         "foo/bar/baz": true,
+         "foo/bar/baz/qux": true,
+         "baz/foo/bar": false,
+         "baz/foo/bar/qux": false
+      }
+   },
+   {
+      "name": "single segment lone wildcard",
+      "pattern": "*",
+      "paths": {
+         "foo": true,
+         "foo/bar": true,
+         "bar/foo": true,
+         "bar/foo/baz": true,
+         "bar/baz": true,
+         "xfoo": true
+      }
+   },
+   {
+      "name": "single segment pattern with wildcard",
+      "pattern": "f*",
+      "paths": {
+         "foo": true,
+         "foo/bar": true,
+         "foo/bar/baz": true,
+         "bar/foo": true,
+         "bar/foo/baz": true,
+         "bar/baz": false,
+         "xfoo": false
+      }
+   },
+   {
+      "name": "single segment pattern with leading slash and lone wildcard",
+      "pattern": "/*",
+      "paths": {
+         "foo": true,
+         "bar": true,
+         "foo/bar": false,
+         "foo/bar/baz": false
+      }
+   },
+   {
+      "name": "single segment pattern with leading slash and wildcard",
+      "pattern": "/f*",
+      "paths": {
+         "foo": true,
+         "foo/bar": true,
+         "foo/bar/baz": true,
+         "bar/foo": false,
+         "bar/foo/baz": false,
+         "bar/baz": false,
+         "xfoo": false
+      }
+   },
+   {
+      "name": "single segment pattern with trailing slash and wildcard",
+      "pattern": "f*/",
+      "paths": {
+         "foo": false,
+         "foo/bar": true,
+         "bar/foo": false,
+         "bar/foo/baz": true,
+         "bar/baz": false,
+         "xfoo": false
+      }
+   },
+   {
+      "name": "single segment pattern with leading and trailing slash and lone wildcard",
+      "pattern": "/*/",
+      "paths": {
+         "foo": false,
+         "foo/bar": true,
+         "bar/foo": true,
+         "bar/foo/baz": true
+      }
+   },
+   {
+      "name": "single segment pattern with leading and trailing slash and wildcard",
+      "pattern": "/f*/",
+      "paths": {
+         "foo": false,
+         "foo/bar": true,
+         "bar/foo": false,
+         "bar/foo/baz": false,
+         "bar/baz": false,
+         "xfoo": false
+      }
+   },
+   {
+      "name": "single segment pattern with escaped wildcard",
+      "pattern": "f\\*o",
+      "paths": {
+         "foo": false,
+         "f*o": true
+      }
+   },
+   {
+      "name": "pattern with trailing wildcard segment",
+      "pattern": "foo/*",
+      "paths": {
+         "foo": false,
+         "foo/bar": true,
+         "foo/bar/baz": false,
+         "bar/foo": false,
+         "bar/foo/baz": false,
+         "bar/baz": false,
+         "xfoo": false
+      }
+   },
+   {
+      "name": "multi-segment pattern with wildcard",
+      "pattern": "foo/*.txt",
+      "paths": {
+         "foo": false,
+         "foo/bar.txt": true,
+         "foo/bar/baz.txt": false,
+         "qux/foo/bar.txt": false,
+         "qux/foo/bar/baz.txt": false
+      }
+   },
+   {
+      "name": "multi-segment pattern with lone wildcard",
+      "pattern": "foo/*/baz",
+      "paths": {
+         "foo": false,
+         "foo/bar": false,
+         "foo/baz": false,
+         "foo/bar/baz": true,
+         "foo/bar/baz/qux": true
+      }
+   },
+   {
+      "name": "single segment pattern with single-character wildcard",
+      "pattern": "f?o",
+      "paths": {
+         "foo": true,
+         "fo": false,
+         "fooo": false
+      }
+   },
+   {
+      "name": "single segment pattern with escaped single-character wildcard",
+      "pattern": "f\\?o",
+      "paths": {
+         "foo": false,
+         "f?o": true
+      }
+   },
+   {
+      "name": "leading double-asterisk wildcard",
+      "pattern": "**/foo/bar",
+      "paths": {
+         "foo/bar": true,
+         "qux/foo/bar": true,
+         "qux/foo/bar/baz": true,
+         "foo/baz/bar": false,
+         "qux/foo/baz/bar": false
+      }
+   },
+   {
+      "name": "leading double-asterisk wildcard with regular wildcard",
+      "pattern": "**/*bar*",
+      "paths": {
+         "bar": true,
+         "foo/bar": true,
+         "foo/rebar": true,
+         "foo/barrio": true,
+         "foo/qux/bar": true
+      }
+   },
+   {
+      "name": "trailing double-asterisk wildcard",
+      "pattern": "foo/bar/**",
+      "paths": {
+         "foo/bar": false,
+         "foo/bar/baz": true,
+         "foo/bar/baz/qux": true,
+         "qux/foo/bar": false,
+         "qux/foo/bar/baz": false
+      }
+   },
+   {
+      "name": "middle double-asterisk wildcard",
+      "pattern": "foo/**/bar",
+      "paths": {
+         "foo/bar": true,
+         "foo/bar/baz": true,
+         "foo/qux/bar/baz": true,
+         "foo/qux/quux/bar/baz": true,
+         "foo/bar/baz/qux": true,
+         "qux/foo/bar": false,
+         "qux/foo/bar/baz": false
+      }
+   },
+   {
+      "name": "middle double-asterisk wildcard with trailing slash",
+      "pattern": "foo/**/",
+      "paths": {
+         "foo": false,
+         "foo/bar": true,
+         "foo/bar/": true,
+         "foo/bar/baz": true
+      }
+   },
+   {
+      "name": "middle double-asterisk wildcard with trailing wildcard",
+      "pattern": "foo/**/bar/b*",
+      "paths": {
+         "foo/bar": false,
+         "foo/bar/baz": true,
+         "foo/bar/qux": false,
+         "foo/qux/bar": false,
+         "foo/qux/bar/baz": true,
+         "foo/qux/bar/qux": false
+      }
+   }
+]

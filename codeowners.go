@@ -67,7 +67,7 @@ func findFileAtStandardLocation() string {
 		pathPrefix = repoRoot
 	}
 
-	for _, path := range []string{"CODEOWNERS", ".github/CODEOWNERS", "docs/CODEOWNERS"} {
+	for _, path := range []string{"CODEOWNERS", ".github/CODEOWNERS", ".gitlab/CODEOWNERS", "docs/CODEOWNERS"} {
 		fullPath := filepath.Join(pathPrefix, path)
 		if fileExists(fullPath) {
 			return fullPath

@@ -20,10 +20,9 @@ func TestExample(t *testing.T) {
 	fmt.Println(match.Owners)
 
 	match, err = ruleset.Match("src/foo.rs")
-	fmt.Println(match)
+    assert.Nil(t, match)
 	// Output:
 	// [@acme/c-developers]
-	// <nil>
 }
 
 func TestExampleParseFile(t *testing.T) {

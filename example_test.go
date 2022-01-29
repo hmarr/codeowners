@@ -22,8 +22,6 @@ func TestExample(t *testing.T) {
 
 	match, err = ruleset.Match("src/foo.rs")
     assert.Nil(t, match)
-	// Output:
-	// [@acme/c-developers]
 }
 
 func TestExampleParseFile(t *testing.T) {

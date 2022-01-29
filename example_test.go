@@ -18,6 +18,7 @@ func TestExample(t *testing.T) {
 
 	match, err := ruleset.Match("src/foo.c")
 	fmt.Println(match.Owners)
+    assert.Equal(t, []codeowners.Owner{codeowners.Owner{Value:"acme/c-developers", Type:"team"}}, match.Owners)
 
 	match, err = ruleset.Match("src/foo.rs")
     assert.Nil(t, match)

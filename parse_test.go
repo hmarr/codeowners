@@ -75,16 +75,38 @@ func TestParseRule(t *testing.T) {
 				Comment: "some comment",
 			},
 		},
+		{
+			name: "pattern with no owners",
+			rule: "pattern",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "pattern"),
+				Owners:  nil,
+				Comment: "",
+			},
+		},
+		{
+			name: "pattern with no owners and comment",
+			rule: "pattern # but no more",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "pattern"),
+				Owners:  nil,
+				Comment: "but no more",
+			},
+		},
+		{
+			name: "pattern with no owners with whitespace",
+			rule: "pattern ",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "pattern"),
+				Owners:  nil,
+				Comment: "",
+			},
+		},
 
 		// Error cases
 		{
 			name: "empty rule",
 			rule: "",
-			err:  "unexpected end of rule",
-		},
-		{
-			name: "no owners",
-			rule: "pattern # but no more",
 			err:  "unexpected end of rule",
 		},
 		{

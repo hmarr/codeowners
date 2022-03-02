@@ -117,8 +117,15 @@ func parseRule(ruleStr string) (Rule, error) {
 	// if the line didn't end with a separator (whitespace)
 	switch state {
 	case statePattern:
-		// We should have at least one owner as well
-		return r, fmt.Errorf("unexpected end of rule")
+		if buf.Len() == 0 { // We should have non-empty pattern
+			return r, fmt.Errorf("unexpected end of rule")
+		}
+
+		pattern, err := newPattern(buf.String())
+		if err != nil {
+			return r, err
+		}
+		r.pattern = pattern
 
 	case stateOwners:
 		// If there's an owner left in the buffer, don't leave it behind
@@ -130,11 +137,6 @@ func parseRule(ruleStr string) (Rule, error) {
 			}
 			r.Owners = append(r.Owners, owner)
 		}
-	}
-
-	// All rules need at least one owner
-	if len(r.Owners) == 0 {
-		return r, fmt.Errorf("unexpected end of rule")
 	}
 
 	return r, nil

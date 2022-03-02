@@ -86,7 +86,7 @@ func printFileOwners(ruleset codeowners.Ruleset, path string, ownerFilters []str
 		return err
 	}
 	// If we didn't get a match, the file is unowned
-	if rule == nil {
+	if rule == nil || rule.Owners == nil {
 		// Don't show unowned files if we're filtering by owner
 		if len(ownerFilters) == 0 {
 			fmt.Printf("%-70s  (unowned)\n", path)

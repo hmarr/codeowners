@@ -63,7 +63,7 @@ func parseRule(ruleStr string) (Rule, error) {
 			switch {
 			case ch == '\\':
 				// Escape the next character (important for whitespace while parsing), but
-				// don't lose the backslash we it's part of the pattern
+				// don't lose the backslash as it's part of the pattern
 				escaped = true
 				buf.WriteRune(ch)
 				continue

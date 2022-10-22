@@ -30,6 +30,7 @@ usage: codeowners <path>...
   -f, --file string     CODEOWNERS file path
   -h, --help            show this help message
   -o, --owner strings   filter results by owner
+  -u, --unowned         only show unowned files (can be combined with -o)
 
 $ ls
 CODEOWNERS       DOCUMENTATION.md README.md        example.go       example_test.go
@@ -61,6 +62,13 @@ Pass the `--owner` flag to filter results by a specific owner.
 $ codeowners -o @example/go-engineers
 example_test.go                      @example/go-engineers
 example.go                           @example/go-engineers
+```
+
+Pass the `--unowned` flag to only show unowned files.
+
+```console
+$ codeowners -u
+CODEOWNERS                           (unowned)
 ```
 
 ## Go library usage

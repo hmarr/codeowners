@@ -14,10 +14,12 @@ import (
 func main() {
 	var (
 		ownerFilters   []string
+		showUnowned    bool
 		codeownersPath string
 		helpFlag       bool
 	)
 	flag.StringSliceVarP(&ownerFilters, "owner", "o", nil, "filter results by owner")
+	flag.BoolVarP(&showUnowned, "unowned", "u", false, "only show unowned files (can be combined with -o)")
 	flag.StringVarP(&codeownersPath, "file", "f", "", "CODEOWNERS file path")
 	flag.BoolVarP(&helpFlag, "help", "h", false, "show this help message")
 
@@ -51,7 +53,7 @@ func main() {
 	for _, startPath := range paths {
 		// godirwalk only accepts directories, so we need to handle files separately
 		if !isDir(startPath) {
-			if err := printFileOwners(ruleset, startPath, ownerFilters); err != nil {
+			if err := printFileOwners(ruleset, startPath, ownerFilters, showUnowned); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v", err)
 				os.Exit(1)
 			}
@@ -66,7 +68,7 @@ func main() {
 
 				// Only show code owners for files, not directories
 				if !dirent.IsDir() {
-					return printFileOwners(ruleset, path, ownerFilters)
+					return printFileOwners(ruleset, path, ownerFilters, showUnowned)
 				}
 				return nil
 			},
@@ -80,15 +82,15 @@ func main() {
 	}
 }
 
-func printFileOwners(ruleset codeowners.Ruleset, path string, ownerFilters []string) error {
+func printFileOwners(ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned bool) error {
 	rule, err := ruleset.Match(path)
 	if err != nil {
 		return err
 	}
 	// If we didn't get a match, the file is unowned
 	if rule == nil || rule.Owners == nil {
-		// Don't show unowned files if we're filtering by owner
-		if len(ownerFilters) == 0 {
+		// Unless explicitly requested, don't show unowned files if we're filtering by owner
+		if len(ownerFilters) == 0 || showUnowned {
 			fmt.Printf("%-70s  (unowned)\n", path)
 		}
 		return nil
@@ -98,7 +100,7 @@ func printFileOwners(ruleset codeowners.Ruleset, path string, ownerFilters []str
 	owners := []string{}
 	for _, o := range rule.Owners {
 		// If there are no filters, show all owners
-		filterMatch := len(ownerFilters) == 0
+		filterMatch := len(ownerFilters) == 0 && !showUnowned
 		for _, filter := range ownerFilters {
 			if filter == o.Value {
 				filterMatch = true

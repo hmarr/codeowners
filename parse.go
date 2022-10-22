@@ -51,7 +51,7 @@ func parseRule(ruleStr string) (Rule, error) {
 	state := statePattern
 	escaped := false
 	buf := bytes.Buffer{}
-	for i, ch := range ruleStr {
+	for i, ch := range strings.TrimSpace(ruleStr) {
 		// Comments consume the rest of the line and stop further parsing
 		if ch == '#' {
 			r.Comment = strings.TrimSpace(ruleStr[i+1:])

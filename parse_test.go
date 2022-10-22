@@ -102,6 +102,24 @@ func TestParseRule(t *testing.T) {
 				Comment: "",
 			},
 		},
+		{
+			name: "pattern with leading and trailing whitespace",
+			rule: " pattern @user ",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "pattern"),
+				Owners:  []Owner{{Value: "user", Type: "username"}},
+				Comment: "",
+			},
+		},
+		{
+			name: "pattern with leading and trailing whitespace and no owner",
+			rule: " pattern ",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "pattern"),
+				Owners:  nil,
+				Comment: "",
+			},
+		},
 
 		// Error cases
 		{

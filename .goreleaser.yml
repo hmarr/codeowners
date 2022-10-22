@@ -41,4 +41,5 @@ changelog:
       - '^docs:'
       - '^test:'
       - '^build:'
+      - '^deps:'
       - '(?i)typo'

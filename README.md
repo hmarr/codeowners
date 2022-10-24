@@ -14,10 +14,10 @@ $ brew tap hmarr/tap
 $ brew install codeowners
 ```
 
-Install the library with `go get`.
+Install the library with `go install`.
 
 ```console
-$ go get github.com/hmarr/codeowners@latest
+$ go install github.com/hmarr/codeowners/cmd/codeowners@latest
 ```
 
 ## Command line usage

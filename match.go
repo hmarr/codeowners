@@ -8,25 +8,57 @@ import (
 )
 
 type pattern struct {
-	pattern string
-	regex   *regexp.Regexp
+	pattern             string
+	regex               *regexp.Regexp
+	leftAnchoredLiteral bool
 }
 
 // newPattern creates a new pattern struct from a gitignore-style pattern string
 func newPattern(patternStr string) (pattern, error) {
-	patternRegex, err := buildPatternRegex(patternStr)
-	if err != nil {
-		return pattern{}, err
+	pat := pattern{pattern: patternStr}
+
+	if !strings.ContainsAny(patternStr, "*?\\") && patternStr[0] == os.PathSeparator {
+		pat.leftAnchoredLiteral = true
+	} else {
+		patternRegex, err := buildPatternRegex(patternStr)
+		if err != nil {
+			return pattern{}, err
+		}
+		pat.regex = patternRegex
 	}
 
-	return pattern{
-		pattern: patternStr,
-		regex:   patternRegex,
-	}, nil
+	return pat, nil
 }
 
 // match tests if the path provided matches the pattern
 func (p pattern) match(testPath string) (bool, error) {
+	if p.leftAnchoredLiteral {
+		prefix := p.pattern
+
+		// Strip the leading slash as we're anchored to the root already
+		if prefix[0] == os.PathSeparator {
+			prefix = prefix[1:]
+		}
+
+		// If the pattern ends with a slash we can do a simple prefix match
+		if prefix[len(prefix)-1] == os.PathSeparator {
+			return strings.HasPrefix(testPath, prefix), nil
+		}
+
+		// If the strings are the same length, check for an exact match
+		if len(testPath) == len(prefix) {
+			return testPath == prefix, nil
+		}
+
+		// Otherwise check if the test path is a subdirectory of the pattern
+		if len(testPath) > len(prefix) && testPath[len(prefix)] == os.PathSeparator {
+			return testPath[:len(prefix)] == prefix, nil
+		}
+
+		// Otherwise the test path must be shorter than the pattern, so it can't match
+		return false, nil
+	}
+
 	return p.regex.MatchString(testPath), nil
 }
 

@@ -7,7 +7,7 @@ A CLI and Go library for GitHub's [CODEOWNERS file](https://docs.github.com/en/g
 
 ## Command line tool
 
-The `codeowners` CLI identifies the owners for files in a local repository or directory.e
+The `codeowners` CLI identifies the owners for files in a local repository or directory.
 
 ### Installation
 

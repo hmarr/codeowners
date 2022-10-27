@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,10 +51,13 @@ func main() {
 		ownerFilters[i] = strings.TrimLeft(ownerFilters[i], "@")
 	}
 
+	out := bufio.NewWriter(os.Stdout)
+	defer out.Flush()
+
 	for _, startPath := range paths {
 		// godirwalk only accepts directories, so we need to handle files separately
 		if !isDir(startPath) {
-			if err := printFileOwners(ruleset, startPath, ownerFilters, showUnowned); err != nil {
+			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v", err)
 				os.Exit(1)
 			}
@@ -66,7 +71,7 @@ func main() {
 
 			// Only show code owners for files, not directories
 			if !d.IsDir() {
-				return printFileOwners(ruleset, path, ownerFilters, showUnowned)
+				return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
 			}
 			return nil
 		})
@@ -78,7 +83,7 @@ func main() {
 	}
 }
 
-func printFileOwners(ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned bool) error {
+func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned bool) error {
 	rule, err := ruleset.Match(path)
 	if err != nil {
 		return err
@@ -87,7 +92,7 @@ func printFileOwners(ruleset codeowners.Ruleset, path string, ownerFilters []str
 	if rule == nil || rule.Owners == nil {
 		// Unless explicitly requested, don't show unowned files if we're filtering by owner
 		if len(ownerFilters) == 0 || showUnowned {
-			fmt.Printf("%-70s  (unowned)\n", path)
+			fmt.Fprintf(out, "%-70s  (unowned)\n", path)
 		}
 		return nil
 	}
@@ -109,7 +114,7 @@ func printFileOwners(ruleset codeowners.Ruleset, path string, ownerFilters []str
 
 	// If the owners slice is empty, no owners matched the filters so don't show anything
 	if len(owners) > 0 {
-		fmt.Printf("%-70s  %s\n", path, strings.Join(owners, " "))
+		fmt.Fprintf(out, "%-70s  %s\n", path, strings.Join(ownersToShow, " "))
 	}
 	return nil
 }

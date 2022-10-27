@@ -98,7 +98,7 @@ func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, own
 	}
 
 	// Figure out which of the owners we need to show according to the --owner filters
-	owners := []string{}
+	ownersToShow := make([]string, 0, len(rule.Owners))
 	for _, o := range rule.Owners {
 		// If there are no filters, show all owners
 		filterMatch := len(ownerFilters) == 0 && !showUnowned
@@ -108,12 +108,12 @@ func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, own
 			}
 		}
 		if filterMatch {
-			owners = append(owners, o.String())
+			ownersToShow = append(ownersToShow, o.String())
 		}
 	}
 
 	// If the owners slice is empty, no owners matched the filters so don't show anything
-	if len(owners) > 0 {
+	if len(ownersToShow) > 0 {
 		fmt.Fprintf(out, "%-70s  %s\n", path, strings.Join(ownersToShow, " "))
 	}
 	return nil

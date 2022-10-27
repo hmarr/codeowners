@@ -104,10 +104,10 @@ type Ruleset []Rule
 // last matching rule takes precedence.
 func (r Ruleset) Match(path string) (*Rule, error) {
 	for i := len(r) - 1; i >= 0; i-- {
-		rule := r[i]
+		rule := &r[i]
 		match, err := rule.Match(path)
 		if match || err != nil {
-			return &rule, err
+			return rule, err
 		}
 	}
 	return nil, nil

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hmarr/codeowners"
-	"github.com/karrick/godirwalk"
 	flag "github.com/spf13/pflag"
 )
 
@@ -60,19 +59,16 @@ func main() {
 			continue
 		}
 
-		err = godirwalk.Walk(startPath, &godirwalk.Options{
-			Callback: func(path string, dirent *godirwalk.Dirent) error {
-				if path == ".git" {
-					return filepath.SkipDir
-				}
+		err = filepath.WalkDir(startPath, func(path string, d os.DirEntry, err error) error {
+			if path == ".git" {
+				return filepath.SkipDir
+			}
 
-				// Only show code owners for files, not directories
-				if !dirent.IsDir() {
-					return printFileOwners(ruleset, path, ownerFilters, showUnowned)
-				}
-				return nil
-			},
-			Unsorted: true,
+			// Only show code owners for files, not directories
+			if !d.IsDir() {
+				return printFileOwners(ruleset, path, ownerFilters, showUnowned)
+			}
+			return nil
 		})
 
 		if err != nil {

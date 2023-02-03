@@ -17,7 +17,7 @@ type pattern struct {
 func newPattern(patternStr string) (pattern, error) {
 	pat := pattern{pattern: patternStr}
 
-	if !strings.ContainsAny(patternStr, "*?\\") && patternStr[0] == os.PathSeparator {
+	if !strings.ContainsAny(patternStr, "*?\\") && patternStr[0] == '/' {
 		pat.leftAnchoredLiteral = true
 	} else {
 		patternRegex, err := buildPatternRegex(patternStr)
@@ -36,12 +36,12 @@ func (p pattern) match(testPath string) (bool, error) {
 		prefix := p.pattern
 
 		// Strip the leading slash as we're anchored to the root already
-		if prefix[0] == os.PathSeparator {
+		if prefix[0] == '/' {
 			prefix = prefix[1:]
 		}
 
 		// If the pattern ends with a slash we can do a simple prefix match
-		if prefix[len(prefix)-1] == os.PathSeparator {
+		if prefix[len(prefix)-1] == '/' {
 			return strings.HasPrefix(testPath, prefix), nil
 		}
 
@@ -95,7 +95,7 @@ func buildPatternRegex(pattern string) (*regexp.Regexp, error) {
 		segs[len(segs)-1] = "**"
 	}
 
-	sep := string(os.PathSeparator)
+	sep := "/"
 
 	lastSegIndex := len(segs) - 1
 	needSlash := false

@@ -2,7 +2,7 @@ package codeowners
 
 import (
 	"fmt"
-	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -32,6 +32,9 @@ func newPattern(patternStr string) (pattern, error) {
 
 // match tests if the path provided matches the pattern
 func (p pattern) match(testPath string) (bool, error) {
+	// Normalize Windows-style path separators to forward slashes
+	testPath = filepath.ToSlash(testPath)
+
 	if p.leftAnchoredLiteral {
 		prefix := p.pattern
 
@@ -51,7 +54,7 @@ func (p pattern) match(testPath string) (bool, error) {
 		}
 
 		// Otherwise check if the test path is a subdirectory of the pattern
-		if len(testPath) > len(prefix) && testPath[len(prefix)] == os.PathSeparator {
+		if len(testPath) > len(prefix) && testPath[len(prefix)] == '/' {
 			return testPath[:len(prefix)] == prefix, nil
 		}
 

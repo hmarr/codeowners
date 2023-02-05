@@ -2,7 +2,7 @@ package codeowners
 
 import (
 	"fmt"
-	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -17,7 +17,7 @@ type pattern struct {
 func newPattern(patternStr string) (pattern, error) {
 	pat := pattern{pattern: patternStr}
 
-	if !strings.ContainsAny(patternStr, "*?\\") && patternStr[0] == os.PathSeparator {
+	if !strings.ContainsAny(patternStr, "*?\\") && patternStr[0] == '/' {
 		pat.leftAnchoredLiteral = true
 	} else {
 		patternRegex, err := buildPatternRegex(patternStr)
@@ -32,16 +32,19 @@ func newPattern(patternStr string) (pattern, error) {
 
 // match tests if the path provided matches the pattern
 func (p pattern) match(testPath string) (bool, error) {
+	// Normalize Windows-style path separators to forward slashes
+	testPath = filepath.ToSlash(testPath)
+
 	if p.leftAnchoredLiteral {
 		prefix := p.pattern
 
 		// Strip the leading slash as we're anchored to the root already
-		if prefix[0] == os.PathSeparator {
+		if prefix[0] == '/' {
 			prefix = prefix[1:]
 		}
 
 		// If the pattern ends with a slash we can do a simple prefix match
-		if prefix[len(prefix)-1] == os.PathSeparator {
+		if prefix[len(prefix)-1] == '/' {
 			return strings.HasPrefix(testPath, prefix), nil
 		}
 
@@ -51,7 +54,7 @@ func (p pattern) match(testPath string) (bool, error) {
 		}
 
 		// Otherwise check if the test path is a subdirectory of the pattern
-		if len(testPath) > len(prefix) && testPath[len(prefix)] == os.PathSeparator {
+		if len(testPath) > len(prefix) && testPath[len(prefix)] == '/' {
 			return testPath[:len(prefix)] == prefix, nil
 		}
 
@@ -95,7 +98,7 @@ func buildPatternRegex(pattern string) (*regexp.Regexp, error) {
 		segs[len(segs)-1] = "**"
 	}
 
-	sep := string(os.PathSeparator)
+	sep := "/"
 
 	lastSegIndex := len(segs) - 1
 	needSlash := false

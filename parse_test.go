@@ -147,8 +147,8 @@ func TestParseRule(t *testing.T) {
 			name: "email owners without email matcher",
 			rule: "file.txt foo@example.com",
 			matcher: []Matcher{
-				MatcherFunc(TeamMatcher),
-				MatcherFunc(UsernameMatcher),
+				MatcherFunc(MatchTeam),
+				MatcherFunc(MatchUsername),
 			},
 			err: "invalid owner format 'foo@example.com' at position 10",
 		},
@@ -156,8 +156,8 @@ func TestParseRule(t *testing.T) {
 			name: "team owners without team matcher",
 			rule: "file.txt @org/team",
 			matcher: []Matcher{
-				MatcherFunc(EmailMatcher),
-				MatcherFunc(UsernameMatcher),
+				MatcherFunc(MatchEmail),
+				MatcherFunc(MatchUsername),
 			},
 			err: "invalid owner format '@org/team' at position 10",
 		},
@@ -165,8 +165,8 @@ func TestParseRule(t *testing.T) {
 			name: "username owners without username matcher",
 			rule: "file.txt @user",
 			matcher: []Matcher{
-				MatcherFunc(EmailMatcher),
-				MatcherFunc(TeamMatcher),
+				MatcherFunc(MatchEmail),
+				MatcherFunc(MatchTeam),
 			},
 			err: "invalid owner format '@user' at position 10",
 		},

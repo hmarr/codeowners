@@ -32,12 +32,14 @@ const (
 )
 
 var DefaultMatchers = []Matcher{
-	MatcherFunc(EmailMatcher),
-	MatcherFunc(TeamMatcher),
-	MatcherFunc(UsernameMatcher),
+	MatcherFunc(MatchEmail),
+	MatcherFunc(MatchTeam),
+	MatcherFunc(MatchUsername),
 }
 
 type Matcher interface {
+	// Matches give string agains a pattern e.g. a regexp.
+	// Should return ErrNoMatch if the pattern doesn't match.
 	Match(s string) (Owner, error)
 }
 
@@ -47,7 +49,7 @@ func (f MatcherFunc) Match(s string) (Owner, error) {
 	return f(s)
 }
 
-func EmailMatcher(s string) (Owner, error) {
+func MatchEmail(s string) (Owner, error) {
 	match := emailRegexp.FindStringSubmatch(s)
 	if match == nil {
 		return Owner{}, ErrNoMatch
@@ -56,7 +58,7 @@ func EmailMatcher(s string) (Owner, error) {
 	return Owner{Value: match[0], Type: EmailOwner}, nil
 }
 
-func TeamMatcher(s string) (Owner, error) {
+func MatchTeam(s string) (Owner, error) {
 	match := teamRegexp.FindStringSubmatch(s)
 	if match == nil {
 		return Owner{}, ErrNoMatch
@@ -65,7 +67,7 @@ func TeamMatcher(s string) (Owner, error) {
 	return Owner{Value: match[1], Type: TeamOwner}, nil
 }
 
-func UsernameMatcher(s string) (Owner, error) {
+func MatchUsername(s string) (Owner, error) {
 	match := usernameRegexp.FindStringSubmatch(s)
 	if match == nil {
 		return Owner{}, ErrNoMatch

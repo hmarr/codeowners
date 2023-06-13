@@ -10,6 +10,7 @@ func TestParseRule(t *testing.T) {
 	examples := []struct {
 		name     string
 		rule     string
+		matcher  []Matcher
 		expected Rule
 		err      string
 	}{
@@ -142,11 +143,38 @@ func TestParseRule(t *testing.T) {
 			rule: "file.txt missing-at-sign",
 			err:  "invalid owner format 'missing-at-sign' at position 10",
 		},
+		{
+			name: "email owners without email matcher",
+			rule: "file.txt foo@example.com",
+			matcher: []Matcher{
+				MatcherFunc(TeamMatcher),
+				MatcherFunc(UsernameMatcher),
+			},
+			err: "invalid owner format 'foo@example.com' at position 10",
+		},
+		{
+			name: "team owners without team matcher",
+			rule: "file.txt @org/team",
+			matcher: []Matcher{
+				MatcherFunc(EmailMatcher),
+				MatcherFunc(UsernameMatcher),
+			},
+			err: "invalid owner format '@org/team' at position 10",
+		},
+		{
+			name: "username owners without username matcher",
+			rule: "file.txt @user",
+			matcher: []Matcher{
+				MatcherFunc(EmailMatcher),
+				MatcherFunc(TeamMatcher),
+			},
+			err: "invalid owner format '@user' at position 10",
+		},
 	}
 
 	for _, e := range examples {
 		t.Run("parses "+e.name, func(t *testing.T) {
-			actual, err := parseRule(e.rule)
+			actual, err := parseRule(e.rule, e.matcher)
 			if e.err != "" {
 				assert.EqualError(t, err, e.err)
 			} else {

@@ -3,11 +3,22 @@ package codeowners
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
 	"strings"
 )
+
+type ErrInvalidOwnerFormat struct {
+	Owner string
+}
+
+func (err ErrInvalidOwnerFormat) Error() string {
+	return fmt.Sprintf("invalid owner format '%s'", err.Owner)
+}
+
+var ErrNoMatch = errors.New("no match")
 
 var (
 	emailRegexp    = regexp.MustCompile(`\A[A-Z0-9a-z\._%\+\-]+@[A-Za-z0-9\.\-]+\.[A-Za-z]{2,6}\z`)
@@ -20,8 +31,52 @@ const (
 	stateOwners
 )
 
-// ParseFile parses a CODEOWNERS file, returning a set of rules.
-func ParseFile(f io.Reader) (Ruleset, error) {
+var DefaultMatchers = []Matcher{
+	MatcherFunc(EmailMatcher),
+	MatcherFunc(TeamMatcher),
+	MatcherFunc(UsernameMatcher),
+}
+
+type Matcher interface {
+	Match(s string) (Owner, error)
+}
+
+type MatcherFunc func(s string) (Owner, error)
+
+func (f MatcherFunc) Match(s string) (Owner, error) {
+	return f(s)
+}
+
+func EmailMatcher(s string) (Owner, error) {
+	match := emailRegexp.FindStringSubmatch(s)
+	if match == nil {
+		return Owner{}, ErrNoMatch
+	}
+
+	return Owner{Value: match[0], Type: EmailOwner}, nil
+}
+
+func TeamMatcher(s string) (Owner, error) {
+	match := teamRegexp.FindStringSubmatch(s)
+	if match == nil {
+		return Owner{}, ErrNoMatch
+	}
+
+	return Owner{Value: match[1], Type: TeamOwner}, nil
+}
+
+func UsernameMatcher(s string) (Owner, error) {
+	match := usernameRegexp.FindStringSubmatch(s)
+	if match == nil {
+		return Owner{}, ErrNoMatch
+	}
+
+	return Owner{Value: match[1], Type: UsernameOwner}, nil
+}
+
+// ParseFile parses a CODEOWNERS file and Matcher, returning a set of rules.
+// If no Matchers are passed explicitly the DefaultMatchers are used.
+func ParseFile(f io.Reader, mm ...Matcher) (Ruleset, error) {
 	rules := Ruleset{}
 	scanner := bufio.NewScanner(f)
 	lineNo := 0
@@ -34,7 +89,7 @@ func ParseFile(f io.Reader) (Ruleset, error) {
 			continue
 		}
 
-		rule, err := parseRule(line)
+		rule, err := parseRule(line, mm)
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", lineNo, err)
 		}
@@ -45,7 +100,7 @@ func ParseFile(f io.Reader) (Ruleset, error) {
 }
 
 // parseRule parses a single line of a CODEOWNERS file, returning a Rule struct
-func parseRule(ruleStr string) (Rule, error) {
+func parseRule(ruleStr string, mm []Matcher) (Rule, error) {
 	r := Rule{}
 
 	state := statePattern
@@ -95,9 +150,9 @@ func parseRule(ruleStr string) (Rule, error) {
 				// through whitespace before or after owner declarations
 				if buf.Len() > 0 {
 					ownerStr := buf.String()
-					owner, err := newOwner(ownerStr)
+					owner, err := newOwner(ownerStr, mm)
 					if err != nil {
-						return r, fmt.Errorf("%s at position %d", err.Error(), i+1-len(ownerStr))
+						return r, fmt.Errorf("%w at position %d", err, i+1-len(ownerStr))
 					}
 					r.Owners = append(r.Owners, owner)
 					buf.Reset()
@@ -131,7 +186,7 @@ func parseRule(ruleStr string) (Rule, error) {
 		// If there's an owner left in the buffer, don't leave it behind
 		if buf.Len() > 0 {
 			ownerStr := buf.String()
-			owner, err := newOwner(ownerStr)
+			owner, err := newOwner(ownerStr, mm)
 			if err != nil {
 				return r, fmt.Errorf("%s at position %d", err.Error(), len(ruleStr)+1-len(ownerStr))
 			}
@@ -143,23 +198,25 @@ func parseRule(ruleStr string) (Rule, error) {
 }
 
 // newOwner figures out which kind of owner this is and returns an Owner struct
-func newOwner(s string) (Owner, error) {
-	match := emailRegexp.FindStringSubmatch(s)
-	if match != nil {
-		return Owner{Value: match[0], Type: EmailOwner}, nil
+func newOwner(s string, mm []Matcher) (Owner, error) {
+	if len(mm) == 0 {
+		mm = DefaultMatchers
 	}
 
-	match = teamRegexp.FindStringSubmatch(s)
-	if match != nil {
-		return Owner{Value: match[1], Type: TeamOwner}, nil
+	for _, m := range mm {
+		o, err := m.Match(s)
+		if errors.Is(err, ErrNoMatch) {
+			continue
+		} else if err != nil {
+			return Owner{}, err
+		}
+
+		return o, nil
 	}
 
-	match = usernameRegexp.FindStringSubmatch(s)
-	if match != nil {
-		return Owner{Value: match[1], Type: UsernameOwner}, nil
+	return Owner{}, ErrInvalidOwnerFormat{
+		Owner: s,
 	}
-
-	return Owner{}, fmt.Errorf("invalid owner format '%s'", s)
 }
 
 func isWhitespace(ch rune) bool {

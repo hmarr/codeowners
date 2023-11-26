@@ -8,11 +8,11 @@ import (
 
 func TestParseRule(t *testing.T) {
 	examples := []struct {
-		name     string
-		rule     string
-		matcher  []Matcher
-		expected Rule
-		err      string
+		name          string
+		rule          string
+		ownerMatchers []OwnerMatcher
+		expected      Rule
+		err           string
 	}{
 		// Success cases
 		{
@@ -146,27 +146,27 @@ func TestParseRule(t *testing.T) {
 		{
 			name: "email owners without email matcher",
 			rule: "file.txt foo@example.com",
-			matcher: []Matcher{
-				MatcherFunc(MatchTeam),
-				MatcherFunc(MatchUsername),
+			ownerMatchers: []OwnerMatcher{
+				OwnerMatchFunc(MatchTeamOwner),
+				OwnerMatchFunc(MatchUsernameOwner),
 			},
 			err: "invalid owner format 'foo@example.com' at position 10",
 		},
 		{
 			name: "team owners without team matcher",
 			rule: "file.txt @org/team",
-			matcher: []Matcher{
-				MatcherFunc(MatchEmail),
-				MatcherFunc(MatchUsername),
+			ownerMatchers: []OwnerMatcher{
+				OwnerMatchFunc(MatchEmailOwner),
+				OwnerMatchFunc(MatchUsernameOwner),
 			},
 			err: "invalid owner format '@org/team' at position 10",
 		},
 		{
 			name: "username owners without username matcher",
 			rule: "file.txt @user",
-			matcher: []Matcher{
-				MatcherFunc(MatchEmail),
-				MatcherFunc(MatchTeam),
+			ownerMatchers: []OwnerMatcher{
+				OwnerMatchFunc(MatchEmailOwner),
+				OwnerMatchFunc(MatchTeamOwner),
 			},
 			err: "invalid owner format '@user' at position 10",
 		},
@@ -174,7 +174,11 @@ func TestParseRule(t *testing.T) {
 
 	for _, e := range examples {
 		t.Run("parses "+e.name, func(t *testing.T) {
-			actual, err := parseRule(e.rule, e.matcher)
+			opts := parseOptions{ownerMatchers: DefaultOwnerMatchers}
+			if e.ownerMatchers != nil {
+				opts.ownerMatchers = e.ownerMatchers
+			}
+			actual, err := parseRule(e.rule, opts)
 			if e.err != "" {
 				assert.EqualError(t, err, e.err)
 			} else {

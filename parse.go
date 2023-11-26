@@ -10,6 +10,24 @@ import (
 	"strings"
 )
 
+type parseOption func(*parseOptions)
+
+type parseOptions struct {
+	ownerMatchers []OwnerMatcher
+}
+
+func WithOwnerMatchers(mm []OwnerMatcher) parseOption {
+	return func(opts *parseOptions) {
+		opts.ownerMatchers = mm
+	}
+}
+
+type OwnerMatcher interface {
+	// Matches give string agains a pattern e.g. a regexp.
+	// Should return ErrNoMatch if the pattern doesn't match.
+	Match(s string) (Owner, error)
+}
+
 type ErrInvalidOwnerFormat struct {
 	Owner string
 }
@@ -26,30 +44,19 @@ var (
 	usernameRegexp = regexp.MustCompile(`\A@([a-zA-Z0-9\-]+)\z`)
 )
 
-const (
-	statePattern = iota + 1
-	stateOwners
-)
-
-var DefaultMatchers = []Matcher{
-	MatcherFunc(MatchEmail),
-	MatcherFunc(MatchTeam),
-	MatcherFunc(MatchUsername),
+var DefaultOwnerMatchers = []OwnerMatcher{
+	OwnerMatchFunc(MatchEmailOwner),
+	OwnerMatchFunc(MatchTeamOwner),
+	OwnerMatchFunc(MatchUsernameOwner),
 }
 
-type Matcher interface {
-	// Matches give string agains a pattern e.g. a regexp.
-	// Should return ErrNoMatch if the pattern doesn't match.
-	Match(s string) (Owner, error)
-}
+type OwnerMatchFunc func(s string) (Owner, error)
 
-type MatcherFunc func(s string) (Owner, error)
-
-func (f MatcherFunc) Match(s string) (Owner, error) {
+func (f OwnerMatchFunc) Match(s string) (Owner, error) {
 	return f(s)
 }
 
-func MatchEmail(s string) (Owner, error) {
+func MatchEmailOwner(s string) (Owner, error) {
 	match := emailRegexp.FindStringSubmatch(s)
 	if match == nil {
 		return Owner{}, ErrNoMatch
@@ -58,7 +65,7 @@ func MatchEmail(s string) (Owner, error) {
 	return Owner{Value: match[0], Type: EmailOwner}, nil
 }
 
-func MatchTeam(s string) (Owner, error) {
+func MatchTeamOwner(s string) (Owner, error) {
 	match := teamRegexp.FindStringSubmatch(s)
 	if match == nil {
 		return Owner{}, ErrNoMatch
@@ -67,7 +74,7 @@ func MatchTeam(s string) (Owner, error) {
 	return Owner{Value: match[1], Type: TeamOwner}, nil
 }
 
-func MatchUsername(s string) (Owner, error) {
+func MatchUsernameOwner(s string) (Owner, error) {
 	match := usernameRegexp.FindStringSubmatch(s)
 	if match == nil {
 		return Owner{}, ErrNoMatch
@@ -76,9 +83,14 @@ func MatchUsername(s string) (Owner, error) {
 	return Owner{Value: match[1], Type: UsernameOwner}, nil
 }
 
-// ParseFile parses a CODEOWNERS file and Matcher, returning a set of rules.
-// If no Matchers are passed explicitly the DefaultMatchers are used.
-func ParseFile(f io.Reader, mm ...Matcher) (Ruleset, error) {
+// ParseFile parses a CODEOWNERS file, returning a set of rules.
+// To override the default owner matchers, pass WithOwnerMatchers() as an option.
+func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
+	opts := parseOptions{ownerMatchers: DefaultOwnerMatchers}
+	for _, opt := range options {
+		opt(&opts)
+	}
+
 	rules := Ruleset{}
 	scanner := bufio.NewScanner(f)
 	lineNo := 0
@@ -91,7 +103,7 @@ func ParseFile(f io.Reader, mm ...Matcher) (Ruleset, error) {
 			continue
 		}
 
-		rule, err := parseRule(line, mm)
+		rule, err := parseRule(line, opts)
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", lineNo, err)
 		}
@@ -101,8 +113,13 @@ func ParseFile(f io.Reader, mm ...Matcher) (Ruleset, error) {
 	return rules, nil
 }
 
+const (
+	statePattern = iota + 1
+	stateOwners
+)
+
 // parseRule parses a single line of a CODEOWNERS file, returning a Rule struct
-func parseRule(ruleStr string, mm []Matcher) (Rule, error) {
+func parseRule(ruleStr string, opts parseOptions) (Rule, error) {
 	r := Rule{}
 
 	state := statePattern
@@ -152,7 +169,7 @@ func parseRule(ruleStr string, mm []Matcher) (Rule, error) {
 				// through whitespace before or after owner declarations
 				if buf.Len() > 0 {
 					ownerStr := buf.String()
-					owner, err := newOwner(ownerStr, mm)
+					owner, err := newOwner(ownerStr, opts.ownerMatchers)
 					if err != nil {
 						return r, fmt.Errorf("%w at position %d", err, i+1-len(ownerStr))
 					}
@@ -188,7 +205,7 @@ func parseRule(ruleStr string, mm []Matcher) (Rule, error) {
 		// If there's an owner left in the buffer, don't leave it behind
 		if buf.Len() > 0 {
 			ownerStr := buf.String()
-			owner, err := newOwner(ownerStr, mm)
+			owner, err := newOwner(ownerStr, opts.ownerMatchers)
 			if err != nil {
 				return r, fmt.Errorf("%s at position %d", err.Error(), len(ruleStr)+1-len(ownerStr))
 			}
@@ -200,11 +217,7 @@ func parseRule(ruleStr string, mm []Matcher) (Rule, error) {
 }
 
 // newOwner figures out which kind of owner this is and returns an Owner struct
-func newOwner(s string, mm []Matcher) (Owner, error) {
-	if len(mm) == 0 {
-		mm = DefaultMatchers
-	}
-
+func newOwner(s string, mm []OwnerMatcher) (Owner, error) {
 	for _, m := range mm {
 		o, err := m.Match(s)
 		if errors.Is(err, ErrNoMatch) {

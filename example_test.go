@@ -8,7 +8,9 @@ import (
 )
 
 func Example() {
-	f := bytes.NewBufferString("src/**/*.c @acme/c-developers")
+	f := bytes.NewBufferString(`src/**/*.c @acme/c-developers
+# The following line should be ignored; it contains only spaces and tabs` +
+		" \t\nsrc/**/*.go @acme/go-developers")
 	ruleset, err := codeowners.ParseFile(f)
 	if err != nil {
 		panic(err)
@@ -19,9 +21,13 @@ func Example() {
 
 	match, err = ruleset.Match("src/foo.rs")
 	fmt.Println(match)
+
+	match, err = ruleset.Match("src/go/bar/bar.go")
+	fmt.Println(match.Owners)
 	// Output:
 	// [@acme/c-developers]
 	// <nil>
+	// [@acme/go-developers]
 }
 
 func ExampleParseFile() {

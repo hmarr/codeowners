@@ -30,7 +30,7 @@ func ParseFile(f io.Reader) (Ruleset, error) {
 		line := scanner.Text()
 
 		// Ignore blank lines and comments
-		if len(line) == 0 || line[0] == '#' {
+		if len(strings.TrimSpace(line)) == 0 || line[0] == '#' {
 			continue
 		}
 

@@ -122,6 +122,12 @@ type Rule struct {
 	pattern    pattern
 }
 
+type Section struct {
+	Name    string
+	Owners  []Owner
+	Comment string
+}
+
 // RawPattern returns the rule's gitignore-style path pattern.
 func (r Rule) RawPattern() string {
 	return r.pattern.pattern
@@ -139,6 +145,8 @@ const (
 	TeamOwner string = "team"
 	// UsernameOwner is the owner type for GitHub usernames.
 	UsernameOwner string = "username"
+	// GroupOwner is the owner type for Gitlab groups.
+	GroupOwner string = "group"
 )
 
 // Owner represents an owner found in a rule.

@@ -122,6 +122,14 @@ type Rule struct {
 	pattern    pattern
 }
 
+type Section struct {
+	Name             string
+	Owners           []Owner
+	Comment          string
+	ApprovalOptional bool
+	ApprovalCount    int
+}
+
 // RawPattern returns the rule's gitignore-style path pattern.
 func (r Rule) RawPattern() string {
 	return r.pattern.pattern

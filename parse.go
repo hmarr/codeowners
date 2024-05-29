@@ -7,13 +7,21 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 type parseOption func(*parseOptions)
 
 type parseOptions struct {
-	ownerMatchers []OwnerMatcher
+	ownerMatchers  []OwnerMatcher
+	sectionSupport bool
+}
+
+func WithSectionSupport() parseOption {
+	return func(opts *parseOptions) {
+		opts.sectionSupport = true
+	}
 }
 
 func WithOwnerMatchers(mm []OwnerMatcher) parseOption {
@@ -40,8 +48,8 @@ var ErrNoMatch = errors.New("no match")
 
 var (
 	emailRegexp    = regexp.MustCompile(`\A[A-Z0-9a-z\._%\+\-]+@[A-Za-z0-9\.\-]+\.[A-Za-z]{2,6}\z`)
-	teamRegexp     = regexp.MustCompile(`\A@([a-zA-Z0-9\-]+\/[a-zA-Z0-9_\-]+)\z`)
-	usernameRegexp = regexp.MustCompile(`\A@([a-zA-Z0-9\-_]+)\z`)
+	teamRegexp     = regexp.MustCompile(`\A@(([a-zA-Z0-9\-_]+)([\/][a-zA-Z0-9\-_]+)+)\z`)
+	usernameRegexp = regexp.MustCompile(`\A@(([a-zA-Z0-9\-_]+)([\._][a-zA-Z0-9\-_]+)*)\z`)
 )
 
 // DefaultOwnerMatchers is the default set of owner matchers, which includes the
@@ -103,6 +111,7 @@ func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
 		opt(&opts)
 	}
 
+	sectionOwners := []Owner{}
 	rules := Ruleset{}
 	scanner := bufio.NewScanner(f)
 	lineNo := 0
@@ -115,7 +124,18 @@ func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
 			continue
 		}
 
-		rule, err := parseRule(line, opts)
+		if opts.sectionSupport && isSectionStart(rune(line[0])) {
+			section, err := parseSection(line, opts)
+			if err != nil {
+				return nil, fmt.Errorf("line %d: %w", lineNo, err)
+			}
+
+			sectionOwners = section.Owners
+
+			continue
+		}
+
+		rule, err := parseRule(line, opts, sectionOwners)
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", lineNo, err)
 		}
@@ -128,10 +148,152 @@ func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
 const (
 	statePattern = iota + 1
 	stateOwners
+	stateSection
+	stateSectionBrace
+	stateSectionApprovalCount
 )
 
+// parseSection parses a single line of a CODEOWNERS file, returning a Rule struct
+func parseSection(ruleStr string, opts parseOptions) (Section, error) {
+	s := Section{}
+
+	state := stateSection
+	escaped := false
+	buf := bytes.Buffer{}
+	for i, ch := range strings.TrimSpace(ruleStr) {
+		// Comments consume the rest of the line and stop further parsing
+		if ch == '#' {
+			s.Comment = strings.TrimSpace(ruleStr[i+1:])
+			break
+		}
+
+		switch state {
+		case stateSection:
+			switch {
+			case ch == '\\':
+				// Escape the next character (important for whitespace while parsing), but
+				// don't lose the backslash as it's part of the pattern
+				escaped = true
+				buf.WriteRune(ch)
+				continue
+
+			case isSectionStart(ch):
+				if ch == '^' {
+					s.ApprovalOptional = true
+
+					continue
+				}
+
+				state = stateSectionBrace
+				continue
+
+			case isSectionChar(ch):
+				buf.WriteRune(ch)
+
+			case isSectionEnd(ch) || isWhitespace(ch) && !escaped:
+				buf.Reset()
+
+				state = stateOwners
+
+			default:
+				return s, fmt.Errorf("section: unexpected character '%c' at position %d", ch, i+1)
+			}
+
+		case stateSectionBrace:
+			switch {
+			case ch == '\\':
+				// Escape the next character (important for whitespace while parsing), but
+				// don't lose the backslash as it's part of the pattern
+				escaped = true
+				buf.WriteRune(ch)
+				continue
+
+			case isSectionEnd(ch):
+				s.Name = buf.String()
+
+				buf.Reset()
+
+				state = stateOwners
+				continue
+
+			case isSectionChar(ch):
+				// Keep any valid pattern characters and escaped whitespace
+				buf.WriteRune(ch)
+
+			default:
+				return s, fmt.Errorf("section: unexpected character '%c' at position %d", ch, i+1)
+			}
+
+		case stateSectionApprovalCount:
+			switch {
+			case isSectionEnd(ch):
+				approvalCount := buf.String()
+				approvalCountInt, err := strconv.Atoi(approvalCount)
+				if err != nil {
+					return s, fmt.Errorf("section: invalid approval count %w at position %d", err, i+1)
+				}
+				s.ApprovalCount = approvalCountInt
+
+				buf.Reset()
+				state = stateOwners
+
+			default:
+				buf.WriteRune(ch)
+			}
+
+		case stateOwners:
+			switch {
+			case isSectionStart(ch):
+				state = stateSectionApprovalCount
+
+			case isWhitespace(ch):
+				// Whitespace means we've reached the end of the owner or we're just chomping
+				// through whitespace before or after owner declarations
+				if buf.Len() > 0 {
+					ownerStr := buf.String()
+					owner, err := newOwner(ownerStr, opts.ownerMatchers)
+					if err != nil {
+						return s, fmt.Errorf("section: %w at position %d", err, i+1-len(ownerStr))
+					}
+
+					s.Owners = append(s.Owners, owner)
+					buf.Reset()
+				}
+
+			case isOwnersChar(ch):
+				// Write valid owner characters to the buffer
+				buf.WriteRune(ch)
+
+			default:
+				return s, fmt.Errorf("section: unexpected character '%c' at position %d", ch, i+1)
+			}
+		}
+	}
+
+	escaped = false
+
+	// We've finished consuming the line, but we might still have content in the buffer
+	// if the line didn't end with a separator (whitespace)
+	switch state {
+	case stateOwners:
+		// If there's an owner left in the buffer, don't leave it behind
+		if buf.Len() > 0 {
+			ownerStr := buf.String()
+			owner, err := newOwner(ownerStr, opts.ownerMatchers)
+			if err != nil {
+				return s, fmt.Errorf("%s at position %d", err.Error(), len(ruleStr)+1-len(ownerStr))
+			}
+
+			s.Owners = append(s.Owners, owner)
+		}
+
+	}
+
+	return s, nil
+}
+
 // parseRule parses a single line of a CODEOWNERS file, returning a Rule struct
-func parseRule(ruleStr string, opts parseOptions) (Rule, error) {
+func parseRule(ruleStr string, opts parseOptions, inheritedOwners []Owner) (Rule, error) {
 	r := Rule{}
 
 	state := statePattern
@@ -225,6 +387,10 @@ func parseRule(ruleStr string, opts parseOptions) (Rule, error) {
 		}
 	}
 
+	if len(r.Owners) == 0 {
+		r.Owners = inheritedOwners
+	}
+
 	return r, nil
 }
 
@@ -270,4 +436,33 @@ func isOwnersChar(ch rune) bool {
 		return true
 	}
 	return isAlphanumeric(ch)
+}
+
+// isSectionChar matches characters that are allowed for section names
+func isSectionChar(ch rune) bool {
+	switch ch {
+	case '.', '@', '/', '_', '%', '+', '-', ' ':
+		return true
+	}
+	return isAlphanumeric(ch)
+}
+
+// isSectionEnd matches characters ends each section block
+// e.g. [Section Name][<approval count>]
+func isSectionEnd(ch rune) bool {
+	switch ch {
+	case ']':
+		return true
+	}
+	return false
+}
+
+// isSectionStart defines characters starting the beginning of a section
+// - `^` starts an optional section
+func isSectionStart(ch rune) bool {
+	switch ch {
+	case '[', '^':
+		return true
+	}
+	return false
 }

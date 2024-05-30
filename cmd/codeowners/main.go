@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,10 +13,13 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+var ErrCheck = errors.New("unowned files exist")
+
 func main() {
 	var (
 		ownerFilters   []string
 		showUnowned    bool
+		checkMode      bool
 		codeownersPath string
 		helpFlag       bool
 	)
@@ -23,6 +27,7 @@ func main() {
 	flag.BoolVarP(&showUnowned, "unowned", "u", false, "only show unowned files (can be combined with -o)")
 	flag.StringVarP(&codeownersPath, "file", "f", "", "CODEOWNERS file path")
 	flag.BoolVarP(&helpFlag, "help", "h", false, "show this help message")
+	flag.BoolVarP(&checkMode, "check", "c", false, "enable check mode and exist with a non-zero status code if unowned files exist")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: codeowners <path>...\n")
@@ -54,10 +59,16 @@ func main() {
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
 
+	var checkError bool
 	for _, startPath := range paths {
 		// godirwalk only accepts directories, so we need to handle files separately
 		if !isDir(startPath) {
-			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned); err != nil {
+			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned, checkMode); err != nil {
+				if errors.Is(err, ErrCheck) {
+					checkError = true
+					continue
+				}
+
 				fmt.Fprintf(os.Stderr, "error: %v", err)
 				os.Exit(1)
 			}
@@ -71,19 +82,44 @@ func main() {
 
 			// Only show code owners for files, not directories
 			if !d.IsDir() {
-				return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
+				err := printFileOwners(out, ruleset, path, ownerFilters, showUnowned, checkMode)
+				if err != nil {
+					if errors.Is(err, ErrCheck) {
+						checkError = true
+						return nil
+					}
+				}
+
+				return err
 			}
 			return nil
 		})
 
 		if err != nil {
+			if errors.Is(err, ErrCheck) {
+				checkError = true
+				continue
+			}
+
 			fmt.Fprintf(os.Stderr, "error: %v", err)
 			os.Exit(1)
 		}
 	}
+
+	if checkError {
+		if showUnowned {
+			out.Flush()
+		}
+
+		fmt.Fprintf(os.Stderr, "error: %v\n", ErrCheck.Error())
+
+		os.Exit(1)
+	}
 }
 
-func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned bool) error {
+func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned bool, checkMode bool) error {
+	hasUnowned := false
+
 	rule, err := ruleset.Match(path)
 	if err != nil {
 		return err
@@ -91,9 +127,18 @@ func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, own
 	// If we didn't get a match, the file is unowned
 	if rule == nil || rule.Owners == nil {
 		// Unless explicitly requested, don't show unowned files if we're filtering by owner
-		if len(ownerFilters) == 0 || showUnowned {
+		if len(ownerFilters) == 0 || showUnowned || checkMode {
 			fmt.Fprintf(out, "%-70s  (unowned)\n", path)
+
+			if checkMode {
+				hasUnowned = true
+			}
 		}
+
+		if hasUnowned {
+			return ErrCheck
+		}
+
 		return nil
 	}
 

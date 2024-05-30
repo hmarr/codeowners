@@ -27,7 +27,7 @@ func main() {
 	flag.BoolVarP(&showUnowned, "unowned", "u", false, "only show unowned files (can be combined with -o)")
 	flag.StringVarP(&codeownersPath, "file", "f", "", "CODEOWNERS file path")
 	flag.BoolVarP(&helpFlag, "help", "h", false, "show this help message")
-	flag.BoolVarP(&checkMode, "check", "c", false, "enable check mode and exist with a non-zero status code if unowned files exist")
+	flag.BoolVarP(&checkMode, "check", "c", false, "exit with a non-zero status code if unowned files exist")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: codeowners <path>...\n")

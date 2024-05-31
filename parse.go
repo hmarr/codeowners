@@ -13,7 +13,14 @@ import (
 type parseOption func(*parseOptions)
 
 type parseOptions struct {
-	ownerMatchers []OwnerMatcher
+	ownerMatchers  []OwnerMatcher
+	sectionSupport bool
+}
+
+func WithSectionSupport() parseOption {
+	return func(opts *parseOptions) {
+		opts.sectionSupport = true
+	}
 }
 
 func WithOwnerMatchers(mm []OwnerMatcher) parseOption {
@@ -115,7 +122,7 @@ func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
 			continue
 		}
 
-		if isSectionBraces(rune(line[0])) {
+		if opts.sectionSupport && isSectionBraces(rune(line[0])) {
 			section, err := parseSection(line, opts)
 			if err != nil {
 				return nil, fmt.Errorf("line %d: %w", lineNo, err)

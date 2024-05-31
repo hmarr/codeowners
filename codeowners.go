@@ -40,21 +40,21 @@ import (
 // LoadFileFromStandardLocation loads and parses a CODEOWNERS file at one of the
 // standard locations for CODEOWNERS files (./, .github/, docs/). If run from a
 // git repository, all paths are relative to the repository root.
-func LoadFileFromStandardLocation() (Ruleset, error) {
+func LoadFileFromStandardLocation(options ...ParseOption) (Ruleset, error) {
 	path := findFileAtStandardLocation()
 	if path == "" {
 		return nil, fmt.Errorf("could not find CODEOWNERS file at any of the standard locations")
 	}
-	return LoadFile(path)
+	return LoadFile(path, options...)
 }
 
 // LoadFile loads and parses a CODEOWNERS file at the path specified.
-func LoadFile(path string) (Ruleset, error) {
+func LoadFile(path string, options ...ParseOption) (Ruleset, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	return ParseFile(f)
+	return ParseFile(f, options...)
 }
 
 // findFileAtStandardLocation loops through the standard locations for

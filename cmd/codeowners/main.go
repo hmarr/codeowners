@@ -15,19 +15,27 @@ import (
 
 var ErrCheck = errors.New("unowned files exist")
 
+type Codeowners struct {
+	ownerFilters   []string
+	showUnowned    bool
+	checkMode      bool
+	codeownersPath string
+	helpFlag       bool
+	sections       bool
+}
+
 func main() {
 	var (
-		ownerFilters   []string
-		showUnowned    bool
-		checkMode      bool
-		codeownersPath string
-		helpFlag       bool
+		c        Codeowners
+		helpFlag bool
 	)
-	flag.StringSliceVarP(&ownerFilters, "owner", "o", nil, "filter results by owner")
-	flag.BoolVarP(&showUnowned, "unowned", "u", false, "only show unowned files (can be combined with -o)")
-	flag.StringVarP(&codeownersPath, "file", "f", "", "CODEOWNERS file path")
+
+	flag.StringSliceVarP(&c.ownerFilters, "owner", "o", nil, "filter results by owner")
+	flag.BoolVarP(&c.showUnowned, "unowned", "u", false, "only show unowned files (can be combined with -o)")
+	flag.StringVarP(&c.codeownersPath, "file", "f", "", "CODEOWNERS file path")
 	flag.BoolVarP(&helpFlag, "help", "h", false, "show this help message")
-	flag.BoolVarP(&checkMode, "check", "c", false, "exit with a non-zero status code if unowned files exist")
+	flag.BoolVarP(&c.checkMode, "check", "c", false, "exit with a non-zero status code if unowned files exist")
+	flag.BoolVarP(&c.sections, "sections", "", false, "support sections and inheritance")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: codeowners <path>...\n")
@@ -40,7 +48,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	ruleset, err := loadCodeowners(codeownersPath)
+	ruleset, err := c.loadCodeowners()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -52,8 +60,8 @@ func main() {
 	}
 
 	// Make the @ optional for GitHub teams and usernames
-	for i := range ownerFilters {
-		ownerFilters[i] = strings.TrimLeft(ownerFilters[i], "@")
+	for i := range c.ownerFilters {
+		c.ownerFilters[i] = strings.TrimLeft(c.ownerFilters[i], "@")
 	}
 
 	out := bufio.NewWriter(os.Stdout)
@@ -63,7 +71,7 @@ func main() {
 	for _, startPath := range paths {
 		// godirwalk only accepts directories, so we need to handle files separately
 		if !isDir(startPath) {
-			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned, checkMode); err != nil {
+			if err := c.printFileOwners(out, ruleset, startPath); err != nil {
 				if errors.Is(err, ErrCheck) {
 					checkError = true
 					continue
@@ -82,7 +90,7 @@ func main() {
 
 			// Only show code owners for files, not directories
 			if !d.IsDir() {
-				err := printFileOwners(out, ruleset, path, ownerFilters, showUnowned, checkMode)
+				err := c.printFileOwners(out, ruleset, path)
 				if err != nil {
 					if errors.Is(err, ErrCheck) {
 						checkError = true
@@ -107,7 +115,7 @@ func main() {
 	}
 
 	if checkError {
-		if showUnowned {
+		if c.showUnowned {
 			out.Flush()
 		}
 
@@ -117,7 +125,7 @@ func main() {
 	}
 }
 
-func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned bool, checkMode bool) error {
+func (c Codeowners) printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string) error {
 	hasUnowned := false
 
 	rule, err := ruleset.Match(path)
@@ -127,10 +135,10 @@ func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, own
 	// If we didn't get a match, the file is unowned
 	if rule == nil || rule.Owners == nil {
 		// Unless explicitly requested, don't show unowned files if we're filtering by owner
-		if len(ownerFilters) == 0 || showUnowned || checkMode {
+		if len(c.ownerFilters) == 0 || c.showUnowned || c.checkMode {
 			fmt.Fprintf(out, "%-70s  (unowned)\n", path)
 
-			if checkMode {
+			if c.checkMode {
 				hasUnowned = true
 			}
 		}
@@ -146,8 +154,8 @@ func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, own
 	ownersToShow := make([]string, 0, len(rule.Owners))
 	for _, o := range rule.Owners {
 		// If there are no filters, show all owners
-		filterMatch := len(ownerFilters) == 0 && !showUnowned
-		for _, filter := range ownerFilters {
+		filterMatch := len(c.ownerFilters) == 0 && !c.showUnowned
+		for _, filter := range c.ownerFilters {
 			if filter == o.Value {
 				filterMatch = true
 			}
@@ -164,11 +172,16 @@ func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, own
 	return nil
 }
 
-func loadCodeowners(path string) (codeowners.Ruleset, error) {
-	if path == "" {
-		return codeowners.LoadFileFromStandardLocation()
+func (c Codeowners) loadCodeowners() (codeowners.Ruleset, error) {
+	var parseOptions []codeowners.ParseOption
+	if c.sections {
+		parseOptions = append(parseOptions, codeowners.WithSectionSupport())
 	}
-	return codeowners.LoadFile(path)
+
+	if c.codeownersPath == "" {
+		return codeowners.LoadFileFromStandardLocation(parseOptions...)
+	}
+	return codeowners.LoadFile(c.codeownersPath, parseOptions...)
 }
 
 // isDir checks if there's a directory at the path specified.

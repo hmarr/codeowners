@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -137,6 +138,7 @@ const (
 	stateOwners
 	stateSection
 	stateSectionBrace
+	stateSectionApprovalCount
 )
 
 // parseSection parses a single line of a CODEOWNERS file, returning a Rule struct
@@ -165,7 +167,8 @@ func parseSection(ruleStr string, opts parseOptions) (Section, error) {
 
 			case isSectionStart(ch):
 				if ch == '^' {
-					// optional approval for this section
+					s.ApprovalOptional = true
+
 					continue
 				}
 
@@ -185,7 +188,6 @@ func parseSection(ruleStr string, opts parseOptions) (Section, error) {
 			}
 
 		case stateSectionBrace:
-			// fmt.Println("stateSectionBrace")
 			switch {
 			case ch == '\\':
 				// Escape the next character (important for whitespace while parsing), but
@@ -210,8 +212,28 @@ func parseSection(ruleStr string, opts parseOptions) (Section, error) {
 				return s, fmt.Errorf("section: unexpected character '%c' at position %d", ch, i+1)
 			}
 
+		case stateSectionApprovalCount:
+			switch {
+			case isSectionEnd(ch):
+				approvalCount := buf.String()
+				approvalCountInt, err := strconv.Atoi(approvalCount)
+				if err != nil {
+					return s, fmt.Errorf("section: invalid approval count %w at position %d", err, i+1)
+				}
+				s.ApprovalCount = approvalCountInt
+
+				buf.Reset()
+				state = stateOwners
+
+			default:
+				buf.WriteRune(ch)
+			}
+
 		case stateOwners:
 			switch {
+			case isSectionStart(ch):
+				state = stateSectionApprovalCount
+
 			case isWhitespace(ch):
 				// Whitespace means we've reached the end of the owner or we're just chomping
 				// through whitespace before or after owner declarations

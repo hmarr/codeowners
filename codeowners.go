@@ -124,9 +124,11 @@ type Rule struct {
 }
 
 type Section struct {
-	Name    string
-	Owners  []Owner
-	Comment string
+	Name             string
+	Owners           []Owner
+	Comment          string
+	ApprovalOptional bool
+	ApprovalCount    int
 }
 
 // RawPattern returns the rule's gitignore-style path pattern.

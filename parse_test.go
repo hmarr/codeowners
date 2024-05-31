@@ -238,6 +238,27 @@ func TestParseSection(t *testing.T) {
 			},
 		},
 		{
+			name: "match sections with optional approval",
+			rule: "^[Section]",
+			expected: Section{
+				Name:             "Section",
+				Owners:           nil,
+				Comment:          "",
+				ApprovalOptional: true,
+			},
+		},
+		{
+			name: "match sections with approval count",
+			rule: "^[Section][2]",
+			expected: Section{
+				Name:             "Section",
+				Owners:           nil,
+				Comment:          "",
+				ApprovalOptional: true,
+				ApprovalCount:    2,
+			},
+		},
+		{
 			name: "match sections with owner",
 			rule: "[Section-B-User] @the-b-user",
 			expected: Section{

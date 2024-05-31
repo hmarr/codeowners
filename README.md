@@ -35,7 +35,7 @@ usage: codeowners <path>...
   -h, --help            show this help message
   -o, --owner strings   filter results by owner
   -u, --unowned         only show unowned files (can be combined with -o)
-  -c, --check           exits with a non-zero status code if unowned files exist
+  -c, --check           exit with a non-zero status code if unowned files exist
 
 $ ls
 CODEOWNERS       DOCUMENTATION.md README.md        example.go       example_test.go

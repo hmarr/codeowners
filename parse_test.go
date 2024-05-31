@@ -16,6 +16,22 @@ func TestParseRule(t *testing.T) {
 	}{
 		// Success cases
 		{
+			name: "username with dots",
+			rule: "file.txt @user.name",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "file.txt"),
+				Owners:  []Owner{{Value: "user.name", Type: "username"}},
+			},
+		},
+		{
+			name: "username with underscore",
+			rule: "file.txt @user_name",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "file.txt"),
+				Owners:  []Owner{{Value: "user_name", Type: "username"}},
+			},
+		},
+		{
 			name: "username owners",
 			rule: "file.txt @user",
 			expected: Rule{
@@ -144,6 +160,11 @@ func TestParseRule(t *testing.T) {
 			err:  "invalid owner format 'missing-at-sign' at position 10",
 		},
 		{
+			name: "malformed owners trailing dot",
+			rule: "file.txt @trailing-dot.",
+			err:  "invalid owner format '@trailing-dot.' at position 10",
+		},
+		{
 			name: "email owners without email matcher",
 			rule: "file.txt foo@example.com",
 			ownerMatchers: []OwnerMatcher{
@@ -208,6 +229,15 @@ func TestParseSection(t *testing.T) {
 			},
 		},
 		{
+			name: "match sections with spaces",
+			rule: "[Section Spaces]",
+			expected: Section{
+				Name:    "Section Spaces",
+				Owners:  nil,
+				Comment: "",
+			},
+		},
+		{
 			name: "match sections with owner",
 			rule: "[Section-B-User] @the-b-user",
 			expected: Section{
@@ -230,11 +260,11 @@ func TestParseSection(t *testing.T) {
 			rule: "[Section] @the/a/team # some comment",
 			expected: Section{
 				Name:    "Section",
-				Owners:  []Owner{{Value: "the/a/team", Type: "group"}},
+				Owners:  []Owner{{Value: "the/a/team", Type: "team"}},
 				Comment: "some comment",
 			},
 			ownerMatchers: []OwnerMatcher{
-				OwnerMatchFunc(MatchGroupOwner),
+				OwnerMatchFunc(MatchTeamOwner),
 			},
 		},
 

@@ -111,7 +111,7 @@ func ParseFile(f io.Reader, options ...ParseOption) (Ruleset, error) {
 			continue
 		}
 
-		if opts.sectionSupport && isSectionBraces(rune(line[0])) {
+		if opts.sectionSupport && isSectionStart(rune(line[0])) {
 			section, err := parseSection(line, opts)
 			if err != nil {
 				return nil, fmt.Errorf("line %d: %w", lineNo, err)
@@ -136,6 +136,7 @@ const (
 	statePattern = iota + 1
 	stateOwners
 	stateSection
+	stateSectionBrace
 )
 
 // parseSection parses a single line of a CODEOWNERS file, returning a Rule struct
@@ -161,17 +162,49 @@ func parseSection(ruleStr string, opts parseOptions) (Section, error) {
 				escaped = true
 				buf.WriteRune(ch)
 				continue
-			case isSectionBraces(ch):
+
+			case isSectionStart(ch):
+				if ch == '^' {
+					// optional approval for this section
+					continue
+				}
+
+				state = stateSectionBrace
 				continue
 
-			case isSectionChar(ch) || (isWhitespace(ch) && escaped):
-				// Keep any valid pattern characters and escaped whitespace
+			case isSectionChar(ch):
 				buf.WriteRune(ch)
 
-			case isWhitespace(ch) && !escaped:
-				s.Name = buf.String()
+			case isSectionEnd(ch) || isWhitespace(ch) && !escaped:
 				buf.Reset()
+
 				state = stateOwners
+
+			default:
+				return s, fmt.Errorf("section: unexpected character '%c' at position %d", ch, i+1)
+			}
+
+		case stateSectionBrace:
+			// fmt.Println("stateSectionBrace")
+			switch {
+			case ch == '\\':
+				// Escape the next character (important for whitespace while parsing), but
+				// don't lose the backslash as it's part of the pattern
+				escaped = true
+				buf.WriteRune(ch)
+				continue
+
+			case isSectionEnd(ch):
+				s.Name = buf.String()
+
+				buf.Reset()
+
+				state = stateOwners
+				continue
+
+			case isSectionChar(ch):
+				// Keep any valid pattern characters and escaped whitespace
+				buf.WriteRune(ch)
 
 			default:
 				return s, fmt.Errorf("section: unexpected character '%c' at position %d", ch, i+1)
@@ -208,9 +241,6 @@ func parseSection(ruleStr string, opts parseOptions) (Section, error) {
 	// We've finished consuming the line, but we might still have content in the buffer
 	// if the line didn't end with a separator (whitespace)
 	switch state {
-	case stateSection:
-		s.Name = buf.String()
-
 	case stateOwners:
 		// If there's an owner left in the buffer, don't leave it behind
 		if buf.Len() > 0 {
@@ -377,16 +407,25 @@ func isOwnersChar(ch rune) bool {
 // isSectionChar matches characters that are allowed in owner definitions
 func isSectionChar(ch rune) bool {
 	switch ch {
-	case '.', '@', '/', '_', '%', '+', '-':
+	case '.', '@', '/', '_', '%', '+', '-', ' ':
 		return true
 	}
 	return isAlphanumeric(ch)
 }
 
-// isSectionBraces matches characters that are allowed in section definitions
-func isSectionBraces(ch rune) bool {
+// isSectionEnd matches characters that are allowed in section definitions
+func isSectionEnd(ch rune) bool {
 	switch ch {
-	case '[', ']':
+	case ']':
+		return true
+	}
+	return false
+}
+
+// isSectionStart matches characters that are allowed in section definitions
+func isSectionStart(ch rune) bool {
+	switch ch {
+	case '[', '^':
 		return true
 	}
 	return false

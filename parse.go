@@ -426,7 +426,7 @@ func isOwnersChar(ch rune) bool {
 	return isAlphanumeric(ch)
 }
 
-// isSectionChar matches characters that are allowed in owner definitions
+// isSectionChar matches characters that are allowed for section names
 func isSectionChar(ch rune) bool {
 	switch ch {
 	case '.', '@', '/', '_', '%', '+', '-', ' ':
@@ -435,7 +435,8 @@ func isSectionChar(ch rune) bool {
 	return isAlphanumeric(ch)
 }
 
-// isSectionEnd matches characters that are allowed in section definitions
+// isSectionEnd matches characters ends each section block
+// e.g. [Section Name][<approval count>]
 func isSectionEnd(ch rune) bool {
 	switch ch {
 	case ']':
@@ -444,7 +445,8 @@ func isSectionEnd(ch rune) bool {
 	return false
 }
 
-// isSectionStart matches characters that are allowed in section definitions
+// isSectionStart defines characters starting the beginning of a section
+// - `^` starts an optional section
 func isSectionStart(ch rune) bool {
 	switch ch {
 	case '[', '^':

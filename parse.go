@@ -173,7 +173,7 @@ func isAlphanumeric(ch rune) bool {
 // isPatternChar matches characters that are allowed in patterns
 func isPatternChar(ch rune) bool {
 	switch ch {
-	case '*', '?', '.', '/', '@', '_', '+', '-', '\\':
+	case '*', '?', '.', '/', '@', '_', '+', '-', '\\', '(', ')':
 		return true
 	}
 	return isAlphanumeric(ch)

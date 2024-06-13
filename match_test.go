@@ -2,7 +2,7 @@ package codeowners
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ type patternTest struct {
 }
 
 func TestMatch(t *testing.T) {
-	data, err := ioutil.ReadFile("testdata/patterns.json")
+	data, err := os.ReadFile("testdata/patterns.json")
 	require.NoError(t, err)
 
 	var tests []patternTest

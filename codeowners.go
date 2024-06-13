@@ -5,27 +5,28 @@
 // the CODEOWNERS file format into rulesets, which may then be used to determine
 // the ownership of files.
 //
-// Usage
+// # Usage
 //
 // To find the owner of a given file, parse a CODEOWNERS file and call Match()
 // on the resulting ruleset.
-//  ruleset, err := codeowners.ParseFile(file)
-//  if err != nil {
-//  	log.Fatal(err)
-//  }
 //
-//  rule, err := ruleset.Match("path/to/file")
-//  if err != nil {
-//  	log.Fatal(err)
-//  }
+//	ruleset, err := codeowners.ParseFile(file)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
 //
-// Command line interface
+//	rule, err := ruleset.Match("path/to/file")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+// # Command line interface
 //
 // A command line interface is also available in the cmd/codeowners package.
 // When run, it will walk the directory tree showing the code owners for each
 // file encountered. The help flag lists available options.
 //
-//  $ codeowners --help
+//	$ codeowners --help
 package codeowners
 
 import (
@@ -39,21 +40,21 @@ import (
 // LoadFileFromStandardLocation loads and parses a CODEOWNERS file at one of the
 // standard locations for CODEOWNERS files (./, .github/, docs/). If run from a
 // git repository, all paths are relative to the repository root.
-func LoadFileFromStandardLocation() (Ruleset, error) {
+func LoadFileFromStandardLocation(options ...ParseOption) (Ruleset, error) {
 	path := findFileAtStandardLocation()
 	if path == "" {
 		return nil, fmt.Errorf("could not find CODEOWNERS file at any of the standard locations")
 	}
-	return LoadFile(path)
+	return LoadFile(path, options...)
 }
 
 // LoadFile loads and parses a CODEOWNERS file at the path specified.
-func LoadFile(path string) (Ruleset, error) {
+func LoadFile(path string, options ...ParseOption) (Ruleset, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	return ParseFile(f)
+	return ParseFile(f, options...)
 }
 
 // findFileAtStandardLocation loops through the standard locations for
@@ -122,6 +123,14 @@ type Rule struct {
 	pattern    pattern
 }
 
+type Section struct {
+	Name             string
+	Owners           []Owner
+	Comment          string
+	ApprovalOptional bool
+	ApprovalCount    int
+}
+
 // RawPattern returns the rule's gitignore-style path pattern.
 func (r Rule) RawPattern() string {
 	return r.pattern.pattern
@@ -139,6 +148,8 @@ const (
 	TeamOwner string = "team"
 	// UsernameOwner is the owner type for GitHub usernames.
 	UsernameOwner string = "username"
+	// GroupOwner is the owner type for Gitlab groups.
+	GroupOwner string = "group"
 )
 
 // Owner represents an owner found in a rule.

@@ -32,6 +32,38 @@ func TestParseRule(t *testing.T) {
 			},
 		},
 		{
+			name: "team owners file with parentheses",
+			rule: "file(1).txt @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "file(1).txt"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
+			name: "team owners file with one parentheses on the left",
+			rule: "file(1.txt @user",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "file(1.txt"),
+				Owners:  []Owner{{Value: "user", Type: "username"}},
+			},
+		},
+		{
+			name: "team owners file with one parentheses on the right",
+			rule: "file1).txt foo@example.com",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "file1).txt"),
+				Owners:  []Owner{{Value: "foo@example.com", Type: "email"}},
+			},
+		},
+		{
+			name: "team owners file with parentheses in the folder name",
+			rule: "(folder)/file.txt @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "(folder)/file.txt"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
 			name: "email owners",
 			rule: "file.txt foo@example.com",
 			expected: Rule{

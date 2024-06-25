@@ -44,18 +44,26 @@ var (
 	usernameRegexp = regexp.MustCompile(`\A@([a-zA-Z0-9\-_]+)\z`)
 )
 
+// DefaultOwnerMatchers is the default set of owner matchers, which includes the
+// GitHub-flavored email, team, and username matchers.
 var DefaultOwnerMatchers = []OwnerMatcher{
 	OwnerMatchFunc(MatchEmailOwner),
 	OwnerMatchFunc(MatchTeamOwner),
 	OwnerMatchFunc(MatchUsernameOwner),
 }
 
+// OwnerMatchFunc is a function that matches a string against a pattern and
+// returns an Owner, or ErrNoMatch if no match was found. It implements the
+// OwnerMatcher interface and may be provided to WithOwnerMatchers to customize
+// owner matching behavior (e.g. to support GitLab-style team names).
 type OwnerMatchFunc func(s string) (Owner, error)
 
 func (f OwnerMatchFunc) Match(s string) (Owner, error) {
 	return f(s)
 }
 
+// MatchEmailOwner matches an email address owner. May be provided to
+// WithOwnerMatchers.
 func MatchEmailOwner(s string) (Owner, error) {
 	match := emailRegexp.FindStringSubmatch(s)
 	if match == nil {
@@ -65,6 +73,8 @@ func MatchEmailOwner(s string) (Owner, error) {
 	return Owner{Value: match[0], Type: EmailOwner}, nil
 }
 
+// MatchTeamOwner matches a GitHub team owner. May be provided to
+// WithOwnerMatchers.
 func MatchTeamOwner(s string) (Owner, error) {
 	match := teamRegexp.FindStringSubmatch(s)
 	if match == nil {
@@ -74,6 +84,8 @@ func MatchTeamOwner(s string) (Owner, error) {
 	return Owner{Value: match[1], Type: TeamOwner}, nil
 }
 
+// MatchUsernameOwner matches a GitHub username owner. May be provided to
+// WithOwnerMatchers.
 func MatchUsernameOwner(s string) (Owner, error) {
 	match := usernameRegexp.FindStringSubmatch(s)
 	if match == nil {

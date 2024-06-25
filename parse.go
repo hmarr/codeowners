@@ -41,7 +41,7 @@ var ErrNoMatch = errors.New("no match")
 var (
 	emailRegexp    = regexp.MustCompile(`\A[A-Z0-9a-z\._%\+\-]+@[A-Za-z0-9\.\-]+\.[A-Za-z]{2,6}\z`)
 	teamRegexp     = regexp.MustCompile(`\A@([a-zA-Z0-9\-]+\/[a-zA-Z0-9_\-]+)\z`)
-	usernameRegexp = regexp.MustCompile(`\A@([a-zA-Z0-9\-]+)\z`)
+	usernameRegexp = regexp.MustCompile(`\A@([a-zA-Z0-9\-_]+)\z`)
 )
 
 var DefaultOwnerMatchers = []OwnerMatcher{

@@ -108,7 +108,7 @@ func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
 	lineNo := 0
 	for scanner.Scan() {
 		lineNo++
-		line := scanner.Text()
+		line := strings.TrimSpace(scanner.Text())
 
 		// Ignore blank lines and comments
 		if len(line) == 0 || line[0] == '#' {

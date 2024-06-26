@@ -47,6 +47,22 @@ func TestParseFile(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "with blank lines with whitespace",
+			contents: "\nfile.txt @user\n \t\nfile2.txt @org/team\n",
+			expected: Ruleset{
+				{
+					pattern:    mustBuildPattern(t, "file.txt"),
+					Owners:     []Owner{{Value: "user", Type: "username"}},
+					LineNumber: 2,
+				},
+				{
+					pattern:    mustBuildPattern(t, "file2.txt"),
+					Owners:     []Owner{{Value: "org/team", Type: "team"}},
+					LineNumber: 4,
+				},
+			},
+		},
 
 		// Error cases
 		{

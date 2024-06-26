@@ -1,10 +1,74 @@
 package codeowners
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestParseFile(t *testing.T) {
+	examples := []struct {
+		name     string
+		contents string
+		expected Ruleset
+		err      string
+	}{
+		// Success cases
+		{
+			name:     "empty file",
+			contents: "",
+			expected: Ruleset{},
+		},
+		{
+			name:     "single rule",
+			contents: "file.txt @user",
+			expected: Ruleset{
+				{
+					pattern:    mustBuildPattern(t, "file.txt"),
+					Owners:     []Owner{{Value: "user", Type: "username"}},
+					LineNumber: 1,
+				},
+			},
+		},
+		{
+			name:     "multiple rules",
+			contents: "file.txt @user\nfile2.txt @org/team",
+			expected: Ruleset{
+				{
+					pattern:    mustBuildPattern(t, "file.txt"),
+					Owners:     []Owner{{Value: "user", Type: "username"}},
+					LineNumber: 1,
+				},
+				{
+					pattern:    mustBuildPattern(t, "file2.txt"),
+					Owners:     []Owner{{Value: "org/team", Type: "team"}},
+					LineNumber: 2,
+				},
+			},
+		},
+
+		// Error cases
+		{
+			name:     "malformed rule",
+			contents: "malformed rule\n",
+			err:      "line 1: invalid owner format 'rule' at position 11",
+		},
+	}
+
+	for _, e := range examples {
+		t.Run("parses "+e.name, func(t *testing.T) {
+			reader := strings.NewReader(e.contents)
+			actual, err := ParseFile(reader)
+			if e.err != "" {
+				assert.EqualError(t, err, e.err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, e.expected, actual)
+			}
+		})
+	}
+}
 
 func TestParseRule(t *testing.T) {
 	examples := []struct {

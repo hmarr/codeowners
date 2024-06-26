@@ -1,3 +1,5 @@
+version: 2
+
 before:
   hooks:
     - go mod download
@@ -17,7 +19,7 @@ brews:
   - homepage: "https://github.com/hmarr/codeowners"
     description: "Determine who owns what according CODEOWNERS files"
 
-    tap:
+    repository:
       owner: hmarr
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_RELEASE_TOKEN }}"
@@ -26,7 +28,7 @@ brews:
       name: release-bot
       email: release-bot@hmarr.com
 
-    folder: Formula
+    directory: Formula
 
 checksum:
   name_template: 'checksums.txt'

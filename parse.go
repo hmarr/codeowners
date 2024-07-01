@@ -11,20 +11,20 @@ import (
 	"strings"
 )
 
-type parseOption func(*parseOptions)
+type ParseOption func(*parseOptions)
 
 type parseOptions struct {
 	ownerMatchers  []OwnerMatcher
 	sectionSupport bool
 }
 
-func WithSectionSupport() parseOption {
+func WithSectionSupport() ParseOption {
 	return func(opts *parseOptions) {
 		opts.sectionSupport = true
 	}
 }
 
-func WithOwnerMatchers(mm []OwnerMatcher) parseOption {
+func WithOwnerMatchers(mm []OwnerMatcher) ParseOption {
 	return func(opts *parseOptions) {
 		opts.ownerMatchers = mm
 	}
@@ -105,7 +105,7 @@ func MatchUsernameOwner(s string) (Owner, error) {
 
 // ParseFile parses a CODEOWNERS file, returning a set of rules.
 // To override the default owner matchers, pass WithOwnerMatchers() as an option.
-func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
+func ParseFile(f io.Reader, options ...ParseOption) (Ruleset, error) {
 	opts := parseOptions{ownerMatchers: DefaultOwnerMatchers}
 	for _, opt := range options {
 		opt(&opts)

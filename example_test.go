@@ -100,3 +100,77 @@ func ExampleRuleset_Match() {
 	// src/foo/bar.go true
 	// src/foo.rs false
 }
+
+func ExampleRuleset_Match_section() {
+	f := bytes.NewBufferString(`[SECTION] @the-a-team
+src
+src-b @user-b
+`)
+	ruleset, _ := codeowners.ParseFile(f, codeowners.WithSectionSupport())
+	match, _ := ruleset.Match("src")
+	fmt.Println("src", match != nil)
+	fmt.Println(ruleset[0].Owners[0].String())
+	match, _ = ruleset.Match("src-b")
+	fmt.Println("src-b", match != nil)
+	fmt.Println(ruleset[1].Owners[0].String())
+	// Output:
+	// src true
+	// @the-a-team
+	// src-b true
+	// @user-b
+}
+
+func ExampleRuleset_Match_section_groups() {
+	f := bytes.NewBufferString(`[SECTION] @the/a/group
+src
+src-b @user-b
+src-c @the/c/group
+`)
+	ruleset, _ := codeowners.ParseFile(f, codeowners.WithSectionSupport())
+	match, _ := ruleset.Match("src")
+	fmt.Println("src", match != nil)
+	fmt.Println(ruleset[0].Owners[0].String())
+	match, _ = ruleset.Match("src-b")
+	fmt.Println("src-b", match != nil)
+	fmt.Println(ruleset[1].Owners[0].String())
+	match, _ = ruleset.Match("src-c")
+	fmt.Println("src-c", match != nil)
+	fmt.Println(ruleset[2].Owners[0].String())
+	// Output:
+	// src true
+	// @the/a/group
+	// src-b true
+	// @user-b
+	// src-c true
+	// @the/c/group
+}
+
+func ExampleRuleset_Match_section_groups_multiple() {
+	f := bytes.NewBufferString(`[SECTION] @the/a/group
+* @other
+
+[SECTION-B] @the/b/group
+b-src
+b-src-b @user-b
+b-src-c @the/c/group
+
+[SECTION-C]
+`)
+	ruleset, _ := codeowners.ParseFile(f, codeowners.WithSectionSupport())
+	match, _ := ruleset.Match("b-src")
+	fmt.Println("b-src", match != nil)
+	fmt.Println(ruleset[1].Owners[0].String())
+	match, _ = ruleset.Match("b-src-b")
+	fmt.Println("b-src-b", match != nil)
+	fmt.Println(ruleset[2].Owners[0].String())
+	match, _ = ruleset.Match("b-src-c")
+	fmt.Println("b-src-c", match != nil)
+	fmt.Println(ruleset[3].Owners[0].String())
+	// Output:
+	// b-src true
+	// @the/b/group
+	// b-src-b true
+	// @user-b
+	// b-src-c true
+	// @the/c/group
+}

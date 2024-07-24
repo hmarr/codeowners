@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -55,6 +56,8 @@ func main() {
 	defer out.Flush()
 
 	for _, startPath := range paths {
+		files := gitFiles(startPath)
+
 		err = filepath.WalkDir(startPath, func(path string, d os.DirEntry, err error) error {
 			if d.IsDir() {
 				if path == ".git" {
@@ -63,6 +66,14 @@ func main() {
 
 				// Don't show code owners for directories.
 				return nil
+			}
+
+			if files != nil {
+				// Skip displaying code owners for files that are not managed by git,
+				// e.g. untracked files or files excluded by .gitignore.
+				if _, ok := files[path]; !ok {
+					return nil
+				}
 			}
 
 			return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
@@ -116,4 +127,26 @@ func loadCodeowners(path string) (codeowners.Ruleset, error) {
 		return codeowners.LoadFileFromStandardLocation()
 	}
 	return codeowners.LoadFile(path)
+}
+
+// gitFiles returns a map of files in the git repository at the given path.
+// Notably, this omits files that have been excluded by .gitignore,
+// .git/info/exclude and system-wide gitignore. See
+// https://git-scm.com/docs/gitignore for more details.
+//
+// Returns nil if anything goes wrong, such as the path not being a git repo or
+// git not being installed.
+func gitFiles(path string) map[string]struct{} {
+	cmd := exec.Command("git", "ls-files", "-z", "--", path)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil
+	}
+
+	files := make(map[string]struct{})
+	for _, file := range strings.Split(string(out), "\x00") {
+		files[file] = struct{}{}
+	}
+
+	return files
 }

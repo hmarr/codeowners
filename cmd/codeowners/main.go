@@ -55,25 +55,17 @@ func main() {
 	defer out.Flush()
 
 	for _, startPath := range paths {
-		// godirwalk only accepts directories, so we need to handle files separately
-		if !isDir(startPath) {
-			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned); err != nil {
-				fmt.Fprintf(os.Stderr, "error: %v", err)
-				os.Exit(1)
-			}
-			continue
-		}
-
 		err = filepath.WalkDir(startPath, func(path string, d os.DirEntry, err error) error {
-			if path == ".git" {
-				return filepath.SkipDir
+			if d.IsDir() {
+				if path == ".git" {
+					return filepath.SkipDir
+				}
+
+				// Don't show code owners for directories.
+				return nil
 			}
 
-			// Only show code owners for files, not directories
-			if !d.IsDir() {
-				return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
-			}
-			return nil
+			return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
 		})
 
 		if err != nil {
@@ -124,13 +116,4 @@ func loadCodeowners(path string) (codeowners.Ruleset, error) {
 		return codeowners.LoadFileFromStandardLocation()
 	}
 	return codeowners.LoadFile(path)
-}
-
-// isDir checks if there's a directory at the path specified.
-func isDir(path string) bool {
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return info.IsDir()
 }

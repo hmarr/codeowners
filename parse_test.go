@@ -233,17 +233,52 @@ func TestParseRule(t *testing.T) {
 				Comment: "",
 			},
 		},
+		{
+			name: "pattern with pipe character '|'",
+			rule: "foo|bar|baz @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "foo|bar|baz"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
+			name: "pattern with left curly brace '{'",
+			rule: "foo{bar.txt @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "foo{bar.txt"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
+			name: "pattern with right curly brace '}'",
+			rule: "foo}bar.txt @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "foo}bar.txt"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
+			name: "pattern with curly braces '{' and '}'",
+			rule: "foo{bar}.txt @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "foo{bar}.txt"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
+			name: "pattern with curly braces and pipe character",
+			rule: "foo|{bar}.txt @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "foo|{bar}.txt"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
 
 		// Error cases
 		{
 			name: "empty rule",
 			rule: "",
 			err:  "unexpected end of rule",
-		},
-		{
-			name: "malformed patterns",
-			rule: "file.{txt @user",
-			err:  "unexpected character '{' at position 6",
 		},
 		{
 			name: "patterns with brackets",

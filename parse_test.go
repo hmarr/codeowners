@@ -273,6 +273,13 @@ func TestParseRule(t *testing.T) {
 				Owners:  []Owner{{Value: "org/team", Type: "team"}},
 			},
 		},
+			name: "username with underscore",
+			rule: "file.txt @user_name",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "file.txt"),
+				Owners:  []Owner{{Value: "user_name", Type: "username"}},
+			},
+		},
 
 		// Error cases
 		{
@@ -326,6 +333,104 @@ func TestParseRule(t *testing.T) {
 				opts.ownerMatchers = e.ownerMatchers
 			}
 			actual, err := parseRule(e.rule, opts)
+			if e.err != "" {
+				assert.EqualError(t, err, e.err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, e.expected, actual)
+			}
+		})
+	}
+}
+
+func TestParseSection(t *testing.T) {
+	examples := []struct {
+		name          string
+		rule          string
+		ownerMatchers []OwnerMatcher
+		expected      Section
+		err           string
+	}{
+		// Success cases
+		{
+			name: "match sections",
+			rule: "[Section]",
+			expected: Section{
+				Name:    "Section",
+				Owners:  nil,
+				Comment: "",
+			},
+		},
+		{
+			name: "match sections with spaces",
+			rule: "[Section Spaces]",
+			expected: Section{
+				Name:    "Section Spaces",
+				Owners:  nil,
+				Comment: "",
+			},
+		},
+		{
+			name: "match sections with optional approval",
+			rule: "^[Section]",
+			expected: Section{
+				Name:             "Section",
+				Owners:           nil,
+				Comment:          "",
+				ApprovalOptional: true,
+			},
+		},
+		{
+			name: "match sections with approval count",
+			rule: "^[Section][2]",
+			expected: Section{
+				Name:             "Section",
+				Owners:           nil,
+				Comment:          "",
+				ApprovalOptional: true,
+				ApprovalCount:    2,
+			},
+		},
+		{
+			name: "match sections with owner",
+			rule: "[Section-B-User] @the-b-user",
+			expected: Section{
+				Name:    "Section-B-User",
+				Owners:  []Owner{{Value: "the-b-user", Type: "username"}},
+				Comment: "",
+			},
+		},
+		{
+			name: "match sections with comment",
+			rule: "[Section] # some comment",
+			expected: Section{
+				Name:    "Section",
+				Owners:  nil,
+				Comment: "some comment",
+			},
+		},
+		{
+			name: "match sections with owner and comment",
+			rule: "[Section] @the/a/team # some comment",
+			expected: Section{
+				Name:    "Section",
+				Owners:  []Owner{{Value: "the/a/team", Type: "team"}},
+				Comment: "some comment",
+			},
+			ownerMatchers: GitLabOwnerMatchers(),
+		},
+
+		// Error cases
+		// TODO
+	}
+
+	for _, e := range examples {
+		t.Run("parses Sections "+e.name, func(t *testing.T) {
+			opts := parseOptions{ownerMatchers: DefaultOwnerMatchers}
+			if e.ownerMatchers != nil {
+				opts.ownerMatchers = e.ownerMatchers
+			}
+			actual, err := parseSection(e.rule, opts)
 			if e.err != "" {
 				assert.EqualError(t, err, e.err)
 			} else {

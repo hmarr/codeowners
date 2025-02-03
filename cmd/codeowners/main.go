@@ -16,11 +16,13 @@ func main() {
 	var (
 		ownerFilters   []string
 		showUnowned    bool
+		showUnmatched  bool
 		codeownersPath string
 		helpFlag       bool
 	)
 	flag.StringSliceVarP(&ownerFilters, "owner", "o", nil, "filter results by owner")
-	flag.BoolVarP(&showUnowned, "unowned", "u", false, "only show unowned files (can be combined with -o)")
+	flag.BoolVarP(&showUnowned, "unowned", "u", false, "only show unowned files (can be combined with -o, implies -m)")
+	flag.BoolVarP(&showUnmatched, "unmatched", "m", false, "only show files not matched by CODEOWNERS (can be combined with -o)")
 	flag.StringVarP(&codeownersPath, "file", "f", "", "CODEOWNERS file path")
 	flag.BoolVarP(&helpFlag, "help", "h", false, "show this help message")
 
@@ -57,7 +59,7 @@ func main() {
 	for _, startPath := range paths {
 		// godirwalk only accepts directories, so we need to handle files separately
 		if !isDir(startPath) {
-			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned); err != nil {
+			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned, showUnmatched); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v", err)
 				os.Exit(1)
 			}
@@ -71,7 +73,7 @@ func main() {
 
 			// Only show code owners for files, not directories
 			if !d.IsDir() {
-				return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
+				return printFileOwners(out, ruleset, path, ownerFilters, showUnowned, showUnmatched)
 			}
 			return nil
 		})
@@ -83,15 +85,22 @@ func main() {
 	}
 }
 
-func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned bool) error {
+func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned, showUnmatched bool) error {
 	rule, err := ruleset.Match(path)
 	if err != nil {
 		return err
 	}
-	// If we didn't get a match, the file is unowned
-	if rule == nil || rule.Owners == nil {
-		// Unless explicitly requested, don't show unowned files if we're filtering by owner
-		if len(ownerFilters) == 0 || showUnowned {
+	// If we didn't get a rule match, consider the file unmatched
+	if rule == nil {
+		if showUnmatched || len(ownerFilters) == 0 {
+			fmt.Fprintf(out, "%-70s  (unmatched)\n", path)
+		}
+		return nil
+	}
+
+	// If we did get a match, but the rule has no owners, the file is unowned
+	if rule.Owners == nil {
+		if showUnowned || (len(ownerFilters) == 0 && !showUnmatched) {
 			fmt.Fprintf(out, "%-70s  (unowned)\n", path)
 		}
 		return nil
@@ -101,7 +110,7 @@ func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, own
 	ownersToShow := make([]string, 0, len(rule.Owners))
 	for _, o := range rule.Owners {
 		// If there are no filters, show all owners
-		filterMatch := len(ownerFilters) == 0 && !showUnowned
+		filterMatch := len(ownerFilters) == 0 && !showUnowned && !showUnmatched
 		for _, filter := range ownerFilters {
 			if filter == o.Value {
 				filterMatch = true

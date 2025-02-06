@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -55,25 +56,27 @@ func main() {
 	defer out.Flush()
 
 	for _, startPath := range paths {
-		// godirwalk only accepts directories, so we need to handle files separately
-		if !isDir(startPath) {
-			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned); err != nil {
-				fmt.Fprintf(os.Stderr, "error: %v", err)
-				os.Exit(1)
-			}
-			continue
-		}
+		files := gitFiles(startPath)
 
 		err = filepath.WalkDir(startPath, func(path string, d os.DirEntry, err error) error {
-			if path == ".git" {
-				return filepath.SkipDir
+			if d.IsDir() {
+				if path == ".git" {
+					return filepath.SkipDir
+				}
+
+				// Don't show code owners for directories.
+				return nil
 			}
 
-			// Only show code owners for files, not directories
-			if !d.IsDir() {
-				return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
+			if files != nil {
+				// Skip displaying code owners for files that are not managed by git,
+				// e.g. untracked files or files excluded by .gitignore.
+				if _, ok := files[path]; !ok {
+					return nil
+				}
 			}
-			return nil
+
+			return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
 		})
 
 		if err != nil {
@@ -126,11 +129,24 @@ func loadCodeowners(path string) (codeowners.Ruleset, error) {
 	return codeowners.LoadFile(path)
 }
 
-// isDir checks if there's a directory at the path specified.
-func isDir(path string) bool {
-	info, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return false
+// gitFiles returns a map of files in the git repository at the given path.
+// Notably, this omits files that have been excluded by .gitignore,
+// .git/info/exclude and system-wide gitignore. See
+// https://git-scm.com/docs/gitignore for more details.
+//
+// Returns nil if anything goes wrong, such as the path not being a git repo or
+// git not being installed.
+func gitFiles(path string) map[string]struct{} {
+	cmd := exec.Command("git", "ls-files", "-z", "--", path)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil
 	}
-	return info.IsDir()
+
+	files := make(map[string]struct{})
+	for _, file := range strings.Split(string(out), "\x00") {
+		files[file] = struct{}{}
+	}
+
+	return files
 }

@@ -305,5 +305,15 @@
          "foo/qux/bar/baz": true,
          "foo/qux/bar/qux": false
       }
+   },
+   {
+      "name": "pattern with square brackets",
+      "pattern": "/apps/[param]/file.ts",
+      "paths": {
+         "apps/[param]/file.ts": true,
+         "apps/other/file.ts": false,
+         "apps/[other]/file.ts": false,
+         "apps/param/file.ts": false
+      }
    }
 ]

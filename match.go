@@ -157,6 +157,9 @@ func buildPatternRegex(pattern string) (*regexp.Regexp, error) {
 				case '?':
 					// Single-character wildcard
 					re.WriteString(`[^` + sep + `]`)
+				case '[', ']':
+					// Escape square brackets to treat them as literal characters
+					re.WriteString(`\` + string(ch))
 				default:
 					// Regular character
 					re.WriteString(regexp.QuoteMeta(string(ch)))

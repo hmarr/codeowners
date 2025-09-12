@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/hmarr/codeowners"
+	"github.com/robandpdx/codeowners"
 )
 
 func Example() {

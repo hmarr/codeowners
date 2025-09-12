@@ -9,6 +9,22 @@ A CLI and Go library for GitHub's [CODEOWNERS file](https://docs.github.com/en/g
 
 The `codeowners` CLI identifies the owners for files in a local repository or directory.
 
+### GitHub CLI extension
+
+This repository can also be installed as a GitHub CLI extension (the repo name is prefixed with `gh-`). After installation you can run the same functionality via `gh codeowners`.
+
+```console
+$ gh extension install robandpdx/gh-codeowners
+$ gh codeowners --help
+usage: codeowners <path>...
+	-f, --file string     CODEOWNERS file path
+	-h, --help            show this help message
+	-o, --owner strings   filter results by owner
+	-u, --unowned         only show unowned files (can be combined with -o)
+```
+
+The extension command name omits the `gh-` prefix, so `gh codeowners` maps to the executable built from `cmd/gh-codeowners`.
+
 ### Installation
 
 If you're on macOS, you can install the CLI from the [homebrew tap](https://github.com/hmarr/homebrew-tap#codeowners).

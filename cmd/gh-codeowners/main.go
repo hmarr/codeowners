@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/robandpdx/codeowners/internal/app"
+	"github.com/robandpdx/gh-codeowners/internal/app"
 )
 
 // This binary is intended for distribution as a GitHub CLI extension. When

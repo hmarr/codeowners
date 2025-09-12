@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/robandpdx/codeowners"
+	"github.com/hmarr/codeowners"
 	pflag "github.com/spf13/pflag"
 )
 

@@ -273,6 +273,14 @@ func TestParseRule(t *testing.T) {
 				Owners:  []Owner{{Value: "org/team", Type: "team"}},
 			},
 		},
+		{
+			name: "patterns with escaped brackets",
+			rule: "nameWith\\[brackets\\] @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "nameWith\\[brackets\\]"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
 
 		// Error cases
 		{

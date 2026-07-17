@@ -281,6 +281,14 @@ func TestParseRule(t *testing.T) {
 				Owners:  []Owner{{Value: "org/team", Type: "team"}},
 			},
 		},
+		{
+			name: "pattern with tilde '~'",
+			rule: "foobar~.txt @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "foobar~.txt"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
 
 		// Error cases
 		{

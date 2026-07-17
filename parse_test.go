@@ -172,6 +172,14 @@ func TestParseRule(t *testing.T) {
 			},
 		},
 		{
+			name: "pattern with colon",
+			rule: "services/foo:bar/**/* @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "services/foo:bar/**/*"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
 			name: "pattern with space",
 			rule: "foo\\ bar @user",
 			expected: Rule{

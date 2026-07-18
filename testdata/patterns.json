@@ -307,6 +307,16 @@
       }
    },
    {
+      "name": "pattern with square brackets",
+      "pattern": "/apps/[param]/file.ts",
+      "paths": {
+         "apps/[param]/file.ts": true,
+         "apps/other/file.ts": false,
+         "apps/[other]/file.ts": false,
+         "apps/param/file.ts": false
+      }
+   },
+   {
       "name": "pattern with colon",
       "pattern": "services/foo:bar/**/*",
       "paths": {

@@ -305,11 +305,6 @@ func TestParseRule(t *testing.T) {
 			err:  "unexpected end of rule",
 		},
 		{
-			name: "patterns with brackets",
-			rule: "file.[cC] @user",
-			err:  "unexpected character '[' at position 6",
-		},
-		{
 			name: "malformed owners",
 			rule: "file.txt missing-at-sign",
 			err:  "invalid owner format 'missing-at-sign' at position 10",

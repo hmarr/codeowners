@@ -164,8 +164,8 @@ func parseRule(ruleStr string, opts parseOptions) (Rule, error) {
 				buf.Reset()
 				state = stateOwners
 
-			case isPatternChar(ch) || (isWhitespace(ch) && escaped):
-				// Keep any valid pattern characters and escaped whitespace
+			case isPatternChar(ch) || escaped:
+				// Keep any valid pattern characters and escaped characters
 				buf.WriteRune(ch)
 
 			default:
@@ -257,7 +257,7 @@ func isAlphanumeric(ch rune) bool {
 // isPatternChar matches characters that are allowed in patterns
 func isPatternChar(ch rune) bool {
 	switch ch {
-	case '*', '?', '.', '/', '@', '_', '+', '-', '\\', '(', ')', '|', '{', '}', '[', ']':
+	case '*', '?', '.', '/', '@', '_', '+', '-', ':', '\\', '(', ')', '|', '{', '}', '[', ']', '~':
 		return true
 	}
 	return isAlphanumeric(ch)

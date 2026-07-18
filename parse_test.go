@@ -172,6 +172,14 @@ func TestParseRule(t *testing.T) {
 			},
 		},
 		{
+			name: "pattern with colon",
+			rule: "services/foo:bar/**/* @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "services/foo:bar/**/*"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
 			name: "pattern with space",
 			rule: "foo\\ bar @user",
 			expected: Rule{
@@ -270,6 +278,22 @@ func TestParseRule(t *testing.T) {
 			rule: "foo|{bar}.txt @org/team",
 			expected: Rule{
 				pattern: mustBuildPattern(t, "foo|{bar}.txt"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
+			name: "patterns with escaped brackets",
+			rule: "nameWith\\[brackets\\] @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "nameWith\\[brackets\\]"),  
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
+		{
+			name: "pattern with tilde '~'",
+			rule: "foobar~.txt @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "foobar~.txt"),
 				Owners:  []Owner{{Value: "org/team", Type: "team"}},
 			},
 		},

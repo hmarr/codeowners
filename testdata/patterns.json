@@ -315,5 +315,13 @@
          "apps/[other]/file.ts": false,
          "apps/param/file.ts": false
       }
+   },
+   {
+      "name": "pattern with colon",
+      "pattern": "services/foo:bar/**/*",
+      "paths": {
+         "services/foo:bar/baz.json": true,
+         "services/foo-bar/baz.json": false
+      }
    }
 ]

@@ -2,9 +2,11 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -17,11 +19,13 @@ func main() {
 		ownerFilters   []string
 		showUnowned    bool
 		codeownersPath string
+		trackedOnly    bool
 		helpFlag       bool
 	)
 	flag.StringSliceVarP(&ownerFilters, "owner", "o", nil, "filter results by owner")
 	flag.BoolVarP(&showUnowned, "unowned", "u", false, "only show unowned files (can be combined with -o)")
 	flag.StringVarP(&codeownersPath, "file", "f", "", "CODEOWNERS file path")
+	flag.BoolVarP(&trackedOnly, "tracked", "t", false, "only show files tracked by git")
 	flag.BoolVarP(&helpFlag, "help", "h", false, "show this help message")
 
 	flag.Usage = func() {
@@ -33,6 +37,11 @@ func main() {
 	if helpFlag {
 		flag.Usage()
 		os.Exit(0)
+	}
+
+	var trackedFiles map[string]bool
+	if trackedOnly {
+		trackedFiles = getTrackedFiles()
 	}
 
 	ruleset, err := loadCodeowners(codeownersPath)
@@ -57,7 +66,12 @@ func main() {
 	for _, startPath := range paths {
 		// godirwalk only accepts directories, so we need to handle files separately
 		if !isDir(startPath) {
-			if err := printFileOwners(out, ruleset, startPath, ownerFilters, showUnowned); err != nil {
+			if err := printFileOwners(
+				out,
+				ruleset,
+				startPath,
+				ownerFilters,
+				showUnowned, trackedOnly, trackedFiles); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v", err)
 				os.Exit(1)
 			}
@@ -71,7 +85,7 @@ func main() {
 
 			// Only show code owners for files, not directories
 			if !d.IsDir() {
-				return printFileOwners(out, ruleset, path, ownerFilters, showUnowned)
+				return printFileOwners(out, ruleset, path, ownerFilters, showUnowned, trackedOnly, trackedFiles)
 			}
 			return nil
 		})
@@ -83,7 +97,20 @@ func main() {
 	}
 }
 
-func printFileOwners(out io.Writer, ruleset codeowners.Ruleset, path string, ownerFilters []string, showUnowned bool) error {
+func printFileOwners(
+	out io.Writer,
+	ruleset codeowners.Ruleset,
+	path string, ownerFilters []string,
+	showUnowned bool,
+	trackedOnly bool,
+	trackedFiles map[string]bool,
+) error {
+	if trackedOnly {
+		if _, ok := trackedFiles[path]; !ok {
+			return nil
+		}
+	}
+
 	rule, err := ruleset.Match(path)
 	if err != nil {
 		return err
@@ -133,4 +160,32 @@ func isDir(path string) bool {
 		return false
 	}
 	return info.IsDir()
+}
+
+func getTrackedFiles() map[string]bool {
+	// Ensure the script is run inside a Git repository
+	if _, err := os.Stat(".git"); os.IsNotExist(err) {
+		fmt.Fprintln(os.Stderr, "error: this is not a Git repository.")
+		os.Exit(1)
+	}
+
+	cmd := exec.Command("git", "ls-files")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, "Error running git ls-files:", err)
+		os.Exit(1)
+	}
+
+	var trackedFiles = make(map[string]bool)
+	files := strings.Split(out.String(), "\n")
+	for _, file := range files {
+		if file != "" {
+			trackedFiles[file] = true
+		}
+	}
+
+	return trackedFiles
 }

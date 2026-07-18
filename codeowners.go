@@ -37,8 +37,8 @@ import (
 )
 
 // LoadFileFromStandardLocation loads and parses a CODEOWNERS file at one of the
-// standard locations for CODEOWNERS files (./, .github/, docs/). If run from a
-// git repository, all paths are relative to the repository root.
+// standard locations for CODEOWNERS files (.github/, ./, docs/, .gitlab/). If
+// run from a git repository, all paths are relative to the repository root.
 func LoadFileFromStandardLocation() (Ruleset, error) {
 	path := findFileAtStandardLocation()
 	if path == "" {
@@ -56,18 +56,34 @@ func LoadFile(path string) (Ruleset, error) {
 	return ParseFile(f)
 }
 
-// findFileAtStandardLocation loops through the standard locations for
-// CODEOWNERS files (./, .github/, docs/), and returns the first place a
-// CODEOWNERS file is found. If run from a git repository, all paths are
-// relative to the repository root.
+// standardLocations lists the locations a CODEOWNERS file may live in, in the
+// order they should be searched. GitHub searches .github/, the root, then docs/,
+// while GitLab searches the root, docs/, then .gitlab/. This ordering is
+// consistent with both: it preserves each provider's relative precedence, so
+// there's no need to know which provider a repository belongs to.
+var standardLocations = []string{
+	".github/CODEOWNERS",
+	"CODEOWNERS",
+	"docs/CODEOWNERS",
+	".gitlab/CODEOWNERS",
+}
+
+// findFileAtStandardLocation loops through the standard locations for CODEOWNERS
+// files, and returns the first place a CODEOWNERS file is found. If run from a
+// git repository, all paths are relative to the repository root.
 func findFileAtStandardLocation() string {
 	pathPrefix := ""
 	repoRoot, inRepo := findRepositoryRoot()
 	if inRepo {
 		pathPrefix = repoRoot
 	}
+	return findFileIn(pathPrefix)
+}
 
-	for _, path := range []string{"CODEOWNERS", ".github/CODEOWNERS", ".gitlab/CODEOWNERS", "docs/CODEOWNERS"} {
+// findFileIn returns the first standard location under pathPrefix that holds a
+// CODEOWNERS file, or an empty string if there isn't one.
+func findFileIn(pathPrefix string) string {
+	for _, path := range standardLocations {
 		fullPath := filepath.Join(pathPrefix, path)
 		if fileExists(fullPath) {
 			return fullPath

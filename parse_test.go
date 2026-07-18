@@ -297,6 +297,14 @@ func TestParseRule(t *testing.T) {
 				Owners:  []Owner{{Value: "org/team", Type: "team"}},
 			},
 		},
+		{
+			name: "pattern with caret '^'",
+			rule: "vllm/v1/worker/^cpu @org/team",
+			expected: Rule{
+				pattern: mustBuildPattern(t, "vllm/v1/worker/^cpu"),
+				Owners:  []Owner{{Value: "org/team", Type: "team"}},
+			},
+		},
 
 		// Error cases
 		{

@@ -323,5 +323,13 @@
          "services/foo:bar/baz.json": true,
          "services/foo-bar/baz.json": false
       }
+   },
+   {
+      "name": "pattern with caret",
+      "pattern": "vllm/v1/worker/^cpu",
+      "paths": {
+         "vllm/v1/worker/^cpu": true,
+         "vllm/v1/worker/cpu": false
+      }
    }
 ]

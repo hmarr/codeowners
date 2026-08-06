@@ -34,6 +34,7 @@ usage: codeowners <path>...
   -f, --file string     CODEOWNERS file path
   -h, --help            show this help message
   -o, --owner strings   filter results by owner
+  -t, --tracked         only show files tracked by git
   -u, --unowned         only show unowned files (can be combined with -o)
 
 $ ls

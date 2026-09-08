@@ -79,6 +79,26 @@ func ExampleParseFile_customOwnerMatchers() {
 	// Go code
 }
 
+func ExampleParseFile_sections() {
+	contents := "[Backend]\nbackend/** @acme/backend\n\n^[Docs][2]\ndocs/** @acme/docs-team"
+	f := bytes.NewBufferString(contents)
+	ruleset, err := codeowners.ParseFile(f)
+	if err != nil {
+		panic(err)
+	}
+	for _, rule := range ruleset {
+		fmt.Printf("%s section=%s min=%d optional=%v\n",
+			rule.RawPattern(),
+			rule.Section.Name,
+			rule.Section.MinApprovals,
+			rule.Section.Optional,
+		)
+	}
+	// Output:
+	// backend/** section=Backend min=1 optional=false
+	// docs/** section=Docs min=2 optional=true
+}
+
 func ExampleRuleset_Match() {
 	f := bytes.NewBufferString("src/**/*.go @acme/go-developers # Go code")
 	ruleset, _ := codeowners.ParseFile(f)

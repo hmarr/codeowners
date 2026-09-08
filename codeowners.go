@@ -129,13 +129,29 @@ func (r Ruleset) Match(path string) (*Rule, error) {
 	return nil, nil
 }
 
+// Section represents a GitLab CODEOWNERS section header. Sections group rules
+// and can specify an approval threshold and whether the section is optional.
+type Section struct {
+	// Name is the section identifier from the header, e.g. "Backend".
+	Name string
+	// MinApprovals is the minimum number of approvals required for rules in this
+	// section. If unset in the file, it defaults to 1.
+	MinApprovals int
+	// Optional indicates that the section is advisory only and should not block
+	// merges. An optional section header is prefixed with ^.
+	Optional bool
+}
+
 // Rule is a CODEOWNERS rule that maps a gitignore-style path pattern to a set
 // of owners.
 type Rule struct {
 	Owners     []Owner
 	Comment    string
 	LineNumber int
-	pattern    pattern
+	// Section is the GitLab CODEOWNERS section this rule belongs to, or nil if
+	// the rule appears before any section header.
+	Section *Section
+	pattern pattern
 }
 
 // RawPattern returns the rule's gitignore-style path pattern.

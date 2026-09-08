@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -106,6 +107,7 @@ func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
 	rules := Ruleset{}
 	scanner := bufio.NewScanner(f)
 	lineNo := 0
+	var currentSection *Section
 	for scanner.Scan() {
 		lineNo++
 		line := strings.TrimSpace(scanner.Text())
@@ -115,11 +117,17 @@ func ParseFile(f io.Reader, options ...parseOption) (Ruleset, error) {
 			continue
 		}
 
+		if section, ok := parseSectionHeader(line); ok {
+			currentSection = section
+			continue
+		}
+
 		rule, err := parseRule(line, opts)
 		if err != nil {
 			return nil, fmt.Errorf("line %d: %w", lineNo, err)
 		}
 		rule.LineNumber = lineNo
+		rule.Section = currentSection
 		rules = append(rules, rule)
 	}
 	return rules, nil
@@ -270,4 +278,35 @@ func isOwnersChar(ch rune) bool {
 		return true
 	}
 	return isAlphanumeric(ch)
+}
+
+// sectionHeaderRegexp matches GitLab CODEOWNERS section headers of the form
+// [Name], [Name][N], ^[Name], or ^[Name][N].
+var sectionHeaderRegexp = regexp.MustCompile(`^(\^?)\[([^\]]+)\](?:\[(\d+)\])?\s*$`)
+
+// parseSectionHeader parses a GitLab CODEOWNERS section header line, returning
+// a Section and true if the line is a valid header, or nil and false otherwise.
+func parseSectionHeader(line string) (*Section, bool) {
+	match := sectionHeaderRegexp.FindStringSubmatch(line)
+	if match == nil {
+		return nil, false
+	}
+
+	name := strings.TrimSpace(match[2])
+	if name == "" {
+		return nil, false
+	}
+
+	s := &Section{
+		Name:         name,
+		MinApprovals: 1,
+		Optional:     match[1] == "^",
+	}
+	if match[3] != "" {
+		n, err := strconv.Atoi(match[3])
+		if err == nil {
+			s.MinApprovals = n
+		}
+	}
+	return s, true
 }

@@ -35,6 +35,9 @@ func (p pattern) match(testPath string) (bool, error) {
 	// Normalize Windows-style path separators to forward slashes
 	testPath = filepath.ToSlash(testPath)
 
+	// Paths are relative to the repository root, so "./foo" is the same as "foo"
+	testPath = strings.TrimPrefix(testPath, "./")
+
 	if p.leftAnchoredLiteral {
 		prefix := p.pattern
 

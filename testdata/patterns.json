@@ -331,5 +331,21 @@
          "vllm/v1/worker/^cpu": true,
          "vllm/v1/worker/cpu": false
       }
+   },
+   {
+      "name": "paths with leading dot-slash",
+      "pattern": "/foo/",
+      "paths": {
+         "./foo/bar": true,
+         "./bar/foo/baz": false
+      }
+   },
+   {
+      "name": "anchored wildcard pattern with leading dot-slash path",
+      "pattern": "/src/*.go",
+      "paths": {
+         "./src/a.go": true,
+         "./lib/src/a.go": false
+      }
    }
 ]

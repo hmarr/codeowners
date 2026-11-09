@@ -33,6 +33,7 @@ $ codeowners --help
 usage: codeowners <path>...
   -f, --file string     CODEOWNERS file path
   -h, --help            show this help message
+  -j, --json            output a JSON array with each file's owners and matching rule
   -o, --owner strings   filter results by owner
   -u, --unowned         only show unowned files (can be combined with -o)
 
@@ -73,6 +74,22 @@ Pass the `--unowned` flag to only show unowned files.
 ```console
 $ codeowners -u
 CODEOWNERS                           (unowned)
+```
+
+Pass the `--json` flag to get machine-readable output for scripts and CI. Each file is an object with its owners and the CODEOWNERS rule that matched it (`pattern` and `line`); `owners` is empty for unowned files and `rule` is `null` when no rule matched. `--owner` and `--unowned` filter the JSON output the same way.
+
+```console
+$ codeowners --json *.md CODEOWNERS
+[
+  {"path":"DOCUMENTATION.md","owners":["@example/docs-writers"],"rule":{"pattern":"*.md","line":2}},
+  {"path":"README.md","owners":["product-manager@example.com"],"rule":{"pattern":"README.md","line":3}},
+  {"path":"CODEOWNERS","owners":[],"rule":null}
+]
+
+$ codeowners --json | jq -r 'map(.owners[]) | group_by(.) | map("\(length) \(.[0])")[]'
+1 @example/docs-writers
+2 @example/go-engineers
+1 product-manager@example.com
 ```
 
 ## Go library
